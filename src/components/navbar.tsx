@@ -1,42 +1,34 @@
+"use client";
+
 import React from 'react';
+import { Home, User, Calendar } from 'lucide-react';
 import Link from 'next/link';
-import { Home, Calendar, FileText, User, Settings } from 'lucide-react';
 
 interface BottomNavigationProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
+    activeItem?: 'home' | 'profile' | 'calendar';
 }
 
-const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, setActiveTab }) => {
-    const tabs = [
-        { id: 'home', name: 'Home', icon: Home, path: '/home' },
-        { id: 'appointments', name: 'Appointments', icon: Calendar, path: '/appointments' },
-        { id: 'records', name: 'Records', icon: FileText, path: '/records' },
-        { id: 'profile', name: 'Profile', icon: User, path: '/profile' },
-        { id: 'settings', name: 'Settings', icon: Settings, path: '/settings' },
-    ];
-
+const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeItem = 'home' }) => {
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-            <div className="max-w-md mx-auto">
-                <div className="flex justify-between">
-                    {tabs.map((tab) => (
-                        <Link
-                            key={tab.id}
-                            href={tab.path}
-                            className="flex-1"
-                            onClick={() => setActiveTab(tab.id)}
-                        >
-                            <div className={`flex flex-col items-center py-2 ${
-                                activeTab === tab.id ? 'text-blue-600' : 'text-gray-500'
-                            }`}>
-                                <tab.icon size={22} />
-                                <span className="text-xs mt-1">{tab.name}</span>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-            </div>
+        <nav className="fixed bottom-0 left-0 right-0 bg-indigo-700 px-4 py-2 flex justify-around">
+            <Link
+                href="/"
+                className={`flex-1 flex flex-col items-center justify-center p-1 ${activeItem === 'home' ? 'text-white' : 'text-white/70'}`}
+            >
+                <Home className="w-6 h-6" />
+            </Link>
+            <Link
+                href="/profile"
+                className={`flex-1 flex flex-col items-center justify-center p-1 ${activeItem === 'profile' ? 'text-white' : 'text-white/70'}`}
+            >
+                <User className="h-6 w-6" />
+            </Link>
+            <Link
+                href="/calendar"
+                className={`flex-1 flex flex-col items-center justify-center p-1 ${activeItem === 'calendar' ? 'text-white' : 'text-white/70'}`}
+            >
+                <Calendar className="w-6 h-6" />
+            </Link>
         </nav>
     );
 };

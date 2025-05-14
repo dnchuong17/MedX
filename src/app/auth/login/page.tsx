@@ -26,7 +26,7 @@ export default function LoginPage() {
         // Simulate login process
         setTimeout(() => {
             setLoading(false);
-            router.push('/home');
+            router.push('/auth/verification');
         }, 1500);
     };
 
