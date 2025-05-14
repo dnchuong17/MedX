@@ -14,7 +14,7 @@ export default function LoginPage() {
         // Simulate login process
         setTimeout(() => {
             setIsLoading(false);
-            router.push('/home');
+            router.push('/auth/login');
         }, 1500);
     };
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
                         {isLoading ? 'Logging in...' : 'Log In'}
                     </button>
 
-                    <Link href="/signup">
+                    <Link href="/(auth)/login">
                         <div className="w-full py-3 bg-blue-100 text-indigo-700 rounded-full font-medium tracking-wide text-center transition-colors hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             Sign Up
                         </div>
