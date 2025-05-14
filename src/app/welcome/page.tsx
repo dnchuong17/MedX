@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import MedicalFolderIcon from "@/components/medical-folder-icon";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -28,11 +29,8 @@ export default function LoginPage() {
                         <div className="absolute inset-0 bg-indigo-700 rounded-tl-lg rounded-tr-lg rounded-br-lg"></div>
                         <div className="absolute inset-0 bg-indigo-500 rounded-tl-lg rounded-tr-lg rounded-br-lg ml-2 mt-2"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-white bg-blue-400 p-2 rounded-lg">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                            </div>
+                            <MedicalFolderIcon />
+
                         </div>
                     </div>
                     <h1 className="text-indigo-800 text-5xl font-bold mt-6">MedX</h1>

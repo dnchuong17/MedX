@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+:root {
+  /* layout */
+  --limit-width: 414px;
+  --bottom-gap: 20px;
+  --header-height: 62px;
+  --navbar-height: 62px;
+  /* common color */
+  --overlay-color: rgba(27, 27, 27, 0.9);
+  /* z-index */
+  --z-index-modal: 100;
+  --z-index-toast: 9999;
+  --z-index-navbar: 90;
+  /* window size */
+  --app-width: 100%;
+  --app-height: 100dvh;
+}
+
 html,
 body {
   padding: 0;
@@ -11,7 +28,7 @@ body {
   overflow: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
-  background-color: #f9fafb;
+  background: radial-gradient(circle at center, rgba(var(--primary), 0.25), #ffffff);
 }
 
 * {
@@ -25,6 +42,22 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  font-family: "SF Pro Display", serif;
+  background-color: white;
+  min-width: 414px;
+  min-height: 600px;
+  height: var(--app-height);
+  margin: auto;
+  position: relative;
+  z-index: 0;
+
+  @media (min-width: 640px) {
+    max-width: var(--limit-width);
+  }
+}
+
+::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes loadingBar {
