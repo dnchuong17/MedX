@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import MedicalFolderIcon from '../../components/medical-folder-icon';
+// import MedicalFolderIcon from '../../components/medical-folder-icon';
 
 export default function SplashScreen() {
     const router = useRouter();
@@ -33,11 +33,13 @@ export default function SplashScreen() {
                 <div className="flex flex-col items-center justify-center w-full">
                     <div className={isLoading ? "animate-pulse" : ""}>
                         <div className="flex flex-col items-center">
-                            <MedicalFolderIcon />
-                            <h1 className="text-indigo-800 text-5xl font-bold mt-6">MedX</h1>
-                            <p className="text-indigo-700 mt-4 text-center">
-                                Your personal healthcare assistant
-                            </p>
+                            {/*<MedicalFolderIcon />*/}
+                            <img src='/image/logo.svg'/>
+                            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#3E3187] to-[#443CC6] drop-shadow-lg">
+                                MedX
+                            </h1>                            <p className="text-indigo-700 mt-4 text-center">
+                            Your personal healthcare assistant
+                        </p>
                         </div>
                     </div>
                     {isLoading && (
