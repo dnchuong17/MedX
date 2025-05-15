@@ -1,19 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import {
-    PhantomWalletAdapter,
-    SolflareWalletAdapter,
-} from "@solana/wallet-adapter-wallets";
-import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
-import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { clusterApiUrl } from "@solana/web3.js";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
-import { SolletWalletAdapter} from "@solana/wallet-adapter-sollet";
 
 type RegisterMethod = "Email" | "Phone" | "Wallet";
 
@@ -34,7 +27,6 @@ const RegisterPageContent = () => {
         e.preventDefault();
         if (registerMethod === "Wallet") {
             if (wallet.connected) {
-                // Direct register by wallet address
                 console.log("Registered by wallet:", wallet.publicKey?.toBase58());
                 router.push("/auth/login");
             } else {
@@ -219,27 +211,4 @@ const RegisterPageContent = () => {
     );
 };
 
-const RegisterPage = () => {
-    const network = WalletAdapterNetwork.Devnet;
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-    const wallets = useMemo(
-        () => [
-            new PhantomWalletAdapter(),
-            new SolflareWalletAdapter({ network }),
-            new SolletWalletAdapter({ network })
-        ],
-        [network]
-    );
-
-    return (
-        <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={wallets} autoConnect>
-                <WalletModalProvider>
-                    <RegisterPageContent />
-                </WalletModalProvider>
-            </WalletProvider>
-        </ConnectionProvider>
-    );
-};
-
-export default RegisterPage;
+export default RegisterPageContent;

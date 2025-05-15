@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import {useWallet} from "@solana/wallet-adapter-react";
+import "@solana/wallet-adapter-react-ui/styles.css";
 
-// Enum for login tabs
 enum LoginTab {
     EMAIL = 'Email',
     PHONE = 'Phone',
@@ -19,16 +21,24 @@ export default function LoginPage() {
     const [password, setPassword] = useState<string>('');
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
+    const { publicKey, connected } = useWallet();
+
+    useEffect(() => {
+        if (connected && publicKey) {
+            console.log('Wallet connected:', publicKey.toBase58());
+        }
+    }, [connected, publicKey]);
+
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate login process
         setTimeout(() => {
             setLoading(false);
             router.push('/auth/verification');
         }, 1500);
     };
+
 
     const renderEmailTab = () => (
         <form onSubmit={handleLogin} className="w-full">
@@ -203,61 +213,71 @@ export default function LoginPage() {
     );
 
     const renderWalletTab = () => (
-        <div className="w-full space-y-4">
-            <div>
-                <label className="block text-gray-800 font-medium mb-3">Connect with Solana Wallet</label>
-                <div className="space-y-3">
-                    <button
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white flex items-center justify-between hover:bg-gray-50"
-                        onClick={() => {/* Handle wallet connection */}}
-                    >
-                        <div className="flex items-center">
-                            <span className="mr-2">💰</span>
-                            <span>Phantom Wallet</span>
-                        </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                    </button>
-
-                    <button
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white flex items-center justify-between hover:bg-gray-50"
-                        onClick={() => {/* Handle wallet connection */}}
-                    >
-                        <div className="flex items-center">
-                            <span className="mr-2">💎</span>
-                            <span>Solflare</span>
-                        </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                    </button>
-
-                    <button
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white flex items-center justify-between hover:bg-gray-50"
-                        onClick={() => {/* Handle wallet connection */}}
-                    >
-                        <div className="flex items-center">
-                            <span className="mr-2">🔑</span>
-                            <span>Sollet</span>
-                        </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                    </button>
+        <div className="w-full space-y-6">
+            {/* Wallet Connection Card */}
+            <div className="w-full space-y-4">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 className="text-base font-medium text-gray-800 mb-2">Connect with Wallet</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Connect your Solana wallet to log in.
+                    </p>
+                    <WalletMultiButton className="w-full" />
                 </div>
             </div>
 
+            {/* Log In Button */}
             <button
                 type="button"
-                onClick={handleLogin}
+                onClick={() => {
+                    if (!connected || !publicKey) {
+                        alert("Please connect your wallet first.");
+                        return;
+                    }
+                    setLoading(true);
+                    // Simulate login logic
+                    setTimeout(() => {
+                        setLoading(false);
+                        router.push('/auth/verification');
+                    }, 1000);
+                }}
                 disabled={loading}
-                className="w-full py-3 bg-indigo-600 text-white rounded-full font-medium tracking-wide transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70"
+                className={`w-full py-3 rounded-full font-medium tracking-wide transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
+                ${loading
+                    ? 'bg-indigo-400 text-white opacity-70 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500'}
+            `}
             >
-                {loading ? 'Connecting...' : 'Log In'}
+                {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                    <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                        />
+                        <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                    </svg>
+                    Logging in...
+                </span>
+                ) : (
+                    'Log In with Wallet'
+                )}
             </button>
         </div>
     );
+
 
     return (
         <div className="h-screen w-full flex flex-col bg-white">
@@ -265,7 +285,8 @@ export default function LoginPage() {
                 {/* Header */}
                 <div className="flex items-center mb-6">
                     <Link href="/" className="text-indigo-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M15 18l-6-6 6-6" />
                         </svg>
                     </Link>

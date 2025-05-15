@@ -10,14 +10,13 @@ export default function SplashScreen() {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        // Simulate app loading with progress
         const interval = setInterval(() => {
             setProgress((prev) => {
                 if (prev >= 100) {
                     clearInterval(interval);
                     setIsLoading(false);
                     setTimeout(() => {
-                        router.push('/welcome'); // Navigate to login page instead of home
+                        router.push('/welcome');
                     }, 500);
                     return 100;
                 }
