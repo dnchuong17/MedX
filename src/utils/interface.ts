@@ -4,6 +4,12 @@ export interface RegisterByEmailInput {
   name: string
 }
 
+export interface RegisterByPhoneInput {
+  phone: string
+  password: string
+  name: string
+}
+
 export interface LoginInput {
   email: string
   password: string

@@ -8,7 +8,7 @@ import Link from "next/link"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
 import "@solana/wallet-adapter-react-ui/styles.css"
-import { registerByEmail } from "@/utils/api"
+import { registerByPhone, setEmailAfterPhone, verifyOtp } from "@/utils/api"
 import { AnimatePresence, motion } from "framer-motion"
 
 type RegisterMethod = "Email" | "Phone"
@@ -40,12 +40,15 @@ const RegisterPageContent = () => {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [step, setStep] = useState<"register" | "setPassword">("register")
+  const [step, setStep] = useState<
+    "register" | "setPassword" | "setEmail" | "verifyOtp"
+  >("register")
   const [isLoading, setIsLoading] = useState(false)
   const [feedback, setFeedback] = useState<{
     type: "success" | "error"
     message: string
   } | null>(null)
+  const [otp, setOtp] = useState("")
 
   useEffect(() => {
     // No wallet tab logic needed
@@ -53,32 +56,59 @@ const RegisterPageContent = () => {
 
   function handleRegister(e: React.FormEvent) {
     e.preventDefault()
-    setStep("setPassword")
+    if (registerMethod === "Phone") {
+      setStep("setPassword")
+    } else {
+      setStep("setPassword")
+    }
   }
 
-  async function handlePasswordCreation(e: React.FormEvent) {
+  async function handlePhonePassword(e: React.FormEvent) {
     e.preventDefault()
-    if (password !== confirmPassword) {
-      setFeedback({ type: "error", message: "Passwords do not match!" })
-      return
-    }
     setIsLoading(true)
     setFeedback(null)
     try {
-      await registerByEmail({ name: fullName, email, password })
-      setFeedback({
-        type: "success",
-        message:
-          "Register successfully! Please check your email to take OTP code.",
-      })
-      setTimeout(
-        () => router.push(`/auth/verify?email=${encodeURIComponent(email)}`),
-        1200
-      )
+      await registerByPhone({ name: fullName, phone: phoneNumber, password })
+      setStep("setEmail")
     } catch (err: any) {
       setFeedback({
         type: "error",
         message: "Register error: " + (err.message || JSON.stringify(err)),
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleSetEmail(e: React.FormEvent) {
+    e.preventDefault()
+    setIsLoading(true)
+    setFeedback(null)
+    try {
+      await setEmailAfterPhone(phoneNumber, email)
+      setStep("verifyOtp")
+    } catch (err: any) {
+      setFeedback({
+        type: "error",
+        message: "Set email error: " + (err.message || JSON.stringify(err)),
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    setIsLoading(true)
+    setFeedback(null)
+    try {
+      await verifyOtp({ email, otp })
+      setFeedback({ type: "success", message: "Verification successful!" })
+      setTimeout(() => router.push("/home"), 1200)
+    } catch (err: any) {
+      setFeedback({
+        type: "error",
+        message: "OTP error: " + (err.message || JSON.stringify(err)),
       })
     } finally {
       setIsLoading(false)
@@ -127,7 +157,13 @@ const RegisterPageContent = () => {
           </button>
         </Link>
         <h1 className="text-center flex-1 text-indigo-700 text-xl font-semibold">
-          {step === "register" ? "Register" : "Set Password"}
+          {step === "register"
+            ? "Register"
+            : step === "setPassword"
+            ? "Set Password"
+            : step === "setEmail"
+            ? "Set Email"
+            : "Verify OTP"}
         </h1>
       </div>
       <div className="p-6 flex-1 flex flex-col justify-center">
@@ -190,19 +226,6 @@ const RegisterPageContent = () => {
                     exit={{ opacity: 0, y: -20 }}
                     className="space-y-4"
                   >
-                    <div className="space-y-2">
-                      <label className="text-gray-800 font-medium">
-                        Full name
-                      </label>
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                        placeholder="Enter your full name"
-                        required
-                      />
-                    </div>
                     {registerMethod === "Email" && (
                       <div className="space-y-2">
                         <label className="text-gray-800 font-medium">
@@ -214,6 +237,21 @@ const RegisterPageContent = () => {
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
                           placeholder="example@example.com"
+                          required
+                        />
+                      </div>
+                    )}
+                    {registerMethod === "Phone" && (
+                      <div className="space-y-2">
+                        <label className="text-gray-800 font-medium">
+                          Full name
+                        </label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                          placeholder="Enter your full name"
                           required
                         />
                       </div>
@@ -314,7 +352,7 @@ const RegisterPageContent = () => {
               className="space-y-8"
             >
               <form
-                onSubmit={handlePasswordCreation}
+                onSubmit={handlePhonePassword}
                 className="space-y-6"
               >
                 <div className="space-y-2">
@@ -370,7 +408,7 @@ const RegisterPageContent = () => {
                 <button
                   type="submit"
                   className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium transition hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:opacity-60"
-                  disabled={isLoading}
+                  disabled={isLoading || password !== confirmPassword}
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -396,8 +434,76 @@ const RegisterPageContent = () => {
                       Creating...
                     </span>
                   ) : (
-                    "Create New Password"
+                    "Continue"
                   )}
+                </button>
+              </form>
+            </motion.div>
+          )}
+          {step === "setEmail" && (
+            <motion.div
+              key="setEmail"
+              variants={stepVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="space-y-8"
+            >
+              <form
+                onSubmit={handleSetEmail}
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-medium">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                    placeholder="example@example.com"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium transition hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:opacity-60"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Sending..." : "Continue"}
+                </button>
+              </form>
+            </motion.div>
+          )}
+          {step === "verifyOtp" && (
+            <motion.div
+              key="verifyOtp"
+              variants={stepVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="space-y-8"
+            >
+              <form
+                onSubmit={handleVerifyOtp}
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <label className="text-gray-800 font-medium">OTP</label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                    placeholder="Enter OTP"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium transition hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:opacity-60"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Verifying..." : "Verify"}
                 </button>
               </form>
             </motion.div>

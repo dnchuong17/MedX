@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "axios"
 import {
   RegisterByEmailInput,
   LoginInput,
@@ -11,6 +11,8 @@ import {
   UpdateUserResponse,
   User,
 } from "./interface";
+  RegisterByPhoneInput,
+} from "./interface"
 
 // Tạo Axios instance
 export const apiClient = axios.create({
@@ -53,6 +55,33 @@ export async function registerWallet(data: RegisterWalletInput): Promise<AuthRes
     console.error("Error registering by wallet:", error);
     throw error;
   }
+export async function registerByPhone(
+  data: RegisterByPhoneInput
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/auth/phone", data)
+  return response.data
+}
+
+export async function setEmailAfterPhone(
+  phone: string,
+  email: string
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/auth/set-email", {
+    phone,
+    email,
+  })
+  return response.data
+}
+
+export async function loginByPhone(
+  phone: string,
+  password: string
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/auth/login-phone", {
+    phone,
+    password,
+  })
+  return response.data
 }
 
 // Xác minh OTP
