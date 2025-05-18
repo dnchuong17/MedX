@@ -1,16 +1,17 @@
 "use client"
 
 import React from "react"
-import { Home, User, Calendar } from "lucide-react"
+import { Home, User, Calendar, MessageCircle } from "lucide-react"
 import Link from "next/link"
 
 interface BottomNavigationProps {
-  activeItem?: "home" | "profile" | "booking"
+  activeItem?: "home" | "profile" | "chat" | "booking"
 }
 
 const navItems = [
   { key: "home", href: "/", icon: Home },
   { key: "profile", href: "/profile", icon: User },
+  { key: "chat", href: "/chat", icon: MessageCircle },
   { key: "booking", href: "/booking", icon: Calendar },
 ] as const
 
