@@ -30,9 +30,9 @@ export default function RootLayout({
     >
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex items-center justify-center bg-gray-100 min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="w-[430px] h-[600px] bg-white shadow-lg overflow-auto rounded-xl">
+        <div className="w-full min-h-screen max-w-screen-md mx-auto flex flex-col justify-center">
           <SolanaWalletProvider>{children}</SolanaWalletProvider>
         </div>
       </body>

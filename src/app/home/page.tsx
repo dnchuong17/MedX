@@ -13,7 +13,9 @@ import {
   LogOut,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-
+import { FaUserCircle } from "react-icons/fa"
+import { motion } from "framer-motion"
+import BottomNavigation from "@/components/navbar"
 interface HealthMetric {
   title: string
   value: string | number
@@ -69,22 +71,31 @@ const HomePage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Header */}
-      <header className="p-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 p-4 flex items-center justify-between bg-white bg-opacity-95 backdrop-blur shadow-xl mb-8">
         <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
-            <Image
-              src="/api/placeholder/40/40"
-              alt="Profile"
-              width={40}
-              height={40}
-            />
-          </div>
-          <div>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"
+          >
+            <FaUserCircle className="w-8 h-8 text-gray-400" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 200 }}
+          >
             <p className="text-sm text-gray-500">Hi, Welcome Back</p>
             <p className="text-sm font-semibold text-blue-600">John Doe</p>
-          </div>
+          </motion.div>
         </div>
-        <div className="flex items-center space-x-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200 }}
+          className="flex items-center space-x-4"
+        >
           <Bell className="h-6 w-6 text-gray-500" />
           <Settings className="h-6 w-6 text-gray-500" />
           <button
@@ -93,17 +104,24 @@ const HomePage = () => {
           >
             <LogOut className="h-6 w-6 text-gray-500 hover:text-red-500 transition-colors" />
           </button>
-        </div>
+        </motion.div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 pb-20">
+      <main className="flex-1 px-4 pb-20 ">
         {/* Health Metrics */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           {healthMetrics.map((metric, index) => (
-            <div
+            <motion.div
               key={index}
-              className="bg-gray-100 rounded-lg p-4"
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{
+                delay: index * 0.1,
+                type: "spring",
+                stiffness: 100,
+              }}
+              className="bg-gray-100 rounded-lg p-4 hover:shadow-lg transition-shadow shadow-lg"
             >
               <h3 className="text-sm text-gray-800 font-medium">
                 {metric.title}
@@ -112,14 +130,21 @@ const HomePage = () => {
                 {metric.value}
               </p>
               <p className="text-xs text-gray-500">{metric.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
 
         {/* Health News */}
-        <div className="mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200 }}
+          className="mb-6"
+        >
           <div className="flex justify-between items-center mb-2">
-            <h2 className="font-semibold text-gray-800">Today's Health News</h2>
+            <h2 className="font-semibold text-gray-800">
+              Today&apos;s Health News
+            </h2>
             <Link
               href="#"
               className="text-xs text-gray-500"
@@ -127,13 +152,19 @@ const HomePage = () => {
               See All
             </Link>
           </div>
-          <div className="bg-gray-100 rounded-lg overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="bg-gray-100 rounded-xl shadow-md"
+          >
             <div className="h-40 w-full relative">
               <Image
-                src="/api/placeholder/400/160"
+                src="/7Foods.png"
                 alt="Healthy Foods"
-                layout="fill"
-                objectFit="cover"
+                fill
+                style={{ objectFit: "cover" }}
+                className="rounded-xl"
               />
             </div>
             <div className="p-4">
@@ -149,19 +180,31 @@ const HomePage = () => {
                 <span className="text-xs text-gray-400">5 hours ago</span>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Current Challenges */}
         <div className="mb-6">
-          <h2 className="font-semibold text-gray-800 mb-2">
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="font-semibold text-gray-800 mb-2"
+          >
             Current Challenges
-          </h2>
-          <div className="space-y-3">
-            {challenges.map((challenge) => (
-              <div
+          </motion.h2>
+          <div className="space-y-3 shadow-md">
+            {challenges.map((challenge, idx) => (
+              <motion.div
                 key={challenge.id}
-                className="bg-gray-100 rounded-lg p-3"
+                initial={{ x: -30, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{
+                  delay: idx * 0.15 + 0.2,
+                  type: "spring",
+                  stiffness: 100,
+                }}
+                className="bg-gray-100 rounded-lg p-3 hover:shadow-md transition-shadow"
               >
                 <div className="flex space-x-3 items-center mb-2">
                   {challenge.icon}
@@ -178,7 +221,7 @@ const HomePage = () => {
                     style={{ width: `${challenge.progress}%` }}
                   ></div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -186,97 +229,46 @@ const HomePage = () => {
         {/* Quick Access */}
         <div>
           <h2 className="font-semibold text-gray-800 mb-2">Quick Access</h2>
-          <div className="grid grid-cols-3 gap-2">
-            <Link
-              href="/profile"
-              className="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-4"
-            >
-              <div className="bg-gray-200 p-2 rounded-full mb-1">
-                <User className="h-5 w-5 text-gray-600" />
-              </div>
-              <span className="text-xs">Profile</span>
-            </Link>
-            <Link
-              href="/chatbot"
-              className="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-4"
-            >
-              <div className="bg-gray-200 p-2 rounded-full mb-1">
-                <MessageCircle className="h-5 w-5 text-gray-600" />
-              </div>
-              <span className="text-xs">Chatbot</span>
-            </Link>
-            <Link
-              href="/community"
-              className="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-4"
-            >
-              <div className="bg-gray-200 p-2 rounded-full mb-1">
-                <Users className="h-5 w-5 text-gray-600" />
-              </div>
-              <span className="text-xs">Community</span>
-            </Link>
+          <div className="grid grid-cols-3 gap-2 ">
+            {[
+              {
+                href: "/profile",
+                label: "Profile",
+                icon: <User className="h-5 w-5 text-gray-600" />,
+              },
+              {
+                href: "/chatbot",
+                label: "Chatbot",
+                icon: <MessageCircle className="h-5 w-5 text-gray-600" />,
+              },
+              {
+                href: "/community",
+                label: "Community",
+                icon: <Users className="h-5 w-5 text-gray-600" />,
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.href}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <Link
+                  href={item.href}
+                  className="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-4 focus:ring-2 focus:ring-indigo-400 outline-none shadow-lg"
+                >
+                  <div className="bg-gray-200 p-2 rounded-full mb-1">
+                    {item.icon}
+                  </div>
+                  <span className="text-xs">{item.label}</span>
+                </Link>
+              </motion.div>
+            ))}
           </div>
         </div>
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-indigo-700 px-4 py-2 flex justify-around">
-        <button className="flex-1 flex items-center justify-center p-1 text-white">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-6 h-6"
-          >
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          </svg>
-        </button>
-        <button className="flex-1 flex items-center justify-center p-1">
-          <User className="h-6 w-6 text-white opacity-70" />
-        </button>
-        <button className="flex-1 flex items-center justify-center p-1">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-6 h-6 text-white opacity-70"
-          >
-            <rect
-              x="3"
-              y="4"
-              width="18"
-              height="18"
-              rx="2"
-              ry="2"
-            ></rect>
-            <line
-              x1="16"
-              y1="2"
-              x2="16"
-              y2="6"
-            ></line>
-            <line
-              x1="8"
-              y1="2"
-              x2="8"
-              y2="6"
-            ></line>
-            <line
-              x1="3"
-              y1="10"
-              x2="21"
-              y2="10"
-            ></line>
-          </svg>
-        </button>
-      </nav>
+      <BottomNavigation activeItem="home" />
     </div>
   )
 }
