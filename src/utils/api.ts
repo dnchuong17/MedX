@@ -6,7 +6,8 @@ import {
   AuthResponse,
   VerifyOtpResponse,
   LoginWalletInput,
-  RegisterWalletInput,
+
+  RegisterByPhoneInput,
 } from "./interface"
 
 const apiClient = axios.create({
@@ -32,22 +33,27 @@ export async function registerByEmail(
   }
 }
 
-export async function registerWallet(
-  data: RegisterWalletInput
+export async function registerByPhone(
+    data: RegisterByPhoneInput
 ): Promise<AuthResponse> {
-  try {
-    const response = await apiClient.post<AuthResponse>(
-      "/auth/register-wallet",
-      data
-    )
-    if (response.status === 200 || response.status === 201) {
-      return response.data
-    }
-    throw new Error(`Unexpected response code: ${response.status}`)
-  } catch (error) {
-    console.error("Error registering by wallet:", error)
-    throw error
-  }
+  const response = await apiClient.post<AuthResponse>("/auth/phone", data);
+  return response.data;
+}
+
+export async function setEmailAfterPhone(
+    phone: string,
+    email: string
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/auth/set-email", { phone, email });
+  return response.data;
+}
+
+export async function loginByPhone(
+    phone: string,
+    password: string
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/auth/login-phone", { phone, password });
+  return response.data;
 }
 
 export async function verifyOtp(
