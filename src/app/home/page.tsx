@@ -162,8 +162,8 @@ const HomePage = () => {
               <Image
                 src="/7Foods.png"
                 alt="Healthy Foods"
-                layout="fill"
-                objectFit="cover"
+                fill
+                style={{ objectFit: "cover" }}
                 className="rounded-xl"
               />
             </div>
