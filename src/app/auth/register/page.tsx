@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import {registerByEmail} from "@/utils/api";
 
 type RegisterMethod = "Email" | "Phone" | "Wallet";
 
@@ -37,9 +38,26 @@ const RegisterPageContent = () => {
         }
     };
 
-    const handlePasswordCreation = (e: React.FormEvent) => {
+    const handlePasswordCreation = async (e: React.FormEvent) => {
         e.preventDefault();
-        router.push("/auth/login");
+
+        if (password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+
+        try {
+            await registerByEmail({
+                name: fullName,
+                email,
+                password
+            });
+
+            alert("Register successfully! Please check your email to take OTP code.");
+            router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
+        } catch (err: any) {
+            alert("Register error: " + (err.message || JSON.stringify(err)));
+        }
     };
 
     if (step === "setPassword") {
