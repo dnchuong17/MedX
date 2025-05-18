@@ -363,7 +363,7 @@ export default function LoginPage() {
                 signature,
               })
               localStorage.setItem("token", response.token)
-              router.push("/home")
+              router.push("/profile/set-up")
             } catch (err: any) {
               alert(
                 err?.response?.data?.message ||
