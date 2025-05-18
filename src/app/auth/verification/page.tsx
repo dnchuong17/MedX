@@ -31,15 +31,12 @@ const Verification: React.FC<VerificationProps> = ({
         return () => clearTimeout(timer);
     }, [timeLeft]);
 
-    // Format timer
     const formatTime = (time: number): string => {
         return `${time < 10 ? '0' : ''}${time}`;
     };
 
-    // Handle OTP input change
     const handleOtpChange = (index: number, value: string) => {
         if (value.length > 1) {
-            // If pasting multiple digits
             const digits = value.split('').slice(0, 6);
             const newOtp = [...otp];
 
@@ -51,7 +48,6 @@ const Verification: React.FC<VerificationProps> = ({
 
             setOtp(newOtp);
 
-            // Focus on the next empty field or the last field
             const nextEmptyIndex = newOtp.findIndex(val => val === '');
             if (nextEmptyIndex !== -1) {
                 setActiveInput(nextEmptyIndex);
@@ -61,12 +57,10 @@ const Verification: React.FC<VerificationProps> = ({
                 inputRefs.current[5]?.focus();
             }
         } else {
-            // Single digit input
             const newOtp = [...otp];
             newOtp[index] = value;
             setOtp(newOtp);
 
-            // Move to next input if current one is filled
             if (value !== '' && index < 5) {
                 setActiveInput(index + 1);
                 inputRefs.current[index + 1]?.focus();
@@ -74,15 +68,12 @@ const Verification: React.FC<VerificationProps> = ({
         }
     };
 
-    // Handle keydown for backspace and arrow keys
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
         if (e.key === 'Backspace') {
             if (otp[index] === '' && index > 0) {
-                // If current field is empty, move to previous field on backspace
                 setActiveInput(index - 1);
                 inputRefs.current[index - 1]?.focus();
             } else {
-                // Clear current field
                 const newOtp = [...otp];
                 newOtp[index] = '';
                 setOtp(newOtp);
@@ -99,21 +90,18 @@ const Verification: React.FC<VerificationProps> = ({
         }
     };
 
-    // Handle number pad click
     const handleNumberClick = (number: string) => {
         if (activeInput < 6) {
             handleOtpChange(activeInput, number);
         }
     };
 
-    // Handle delete button click
     const handleDeleteClick = () => {
         if (activeInput >= 0) {
             handleKeyDown({ key: 'Backspace', preventDefault: () => {} } as React.KeyboardEvent<HTMLInputElement>, activeInput);
         }
     };
 
-    // Handle form submission
     const handleSubmit = () => {
         const otpValue = otp.join('');
         if (otpValue.length === 6) {
@@ -131,12 +119,9 @@ const Verification: React.FC<VerificationProps> = ({
         }
     };
 
-    // Handle resend code
     const handleResendCode = () => {
         if (timeLeft <= 0) {
-            // Simulate resending code
             setTimeLeft(59);
-            // Here you would call your API to resend the code
         }
     };
 
