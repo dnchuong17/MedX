@@ -6,7 +6,6 @@ import {
   AuthResponse,
   VerifyOtpResponse,
   LoginWalletInput,
-
   RegisterByPhoneInput,
 } from "./interface"
 
@@ -34,26 +33,32 @@ export async function registerByEmail(
 }
 
 export async function registerByPhone(
-    data: RegisterByPhoneInput
+  data: RegisterByPhoneInput
 ): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/auth/phone", data);
-  return response.data;
+  const response = await apiClient.post<AuthResponse>("/auth/phone", data)
+  return response.data
 }
 
 export async function setEmailAfterPhone(
-    phone: string,
-    email: string
+  phone: string,
+  email: string
 ): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/auth/set-email", { phone, email });
-  return response.data;
+  const response = await apiClient.post<AuthResponse>("/auth/set-email", {
+    phone,
+    email,
+  })
+  return response.data
 }
 
 export async function loginByPhone(
-    phone: string,
-    password: string
+  phone: string,
+  password: string
 ): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/auth/login-phone", { phone, password });
-  return response.data;
+  const response = await apiClient.post<AuthResponse>("/auth/login-phone", {
+    phone,
+    password,
+  })
+  return response.data
 }
 
 export async function verifyOtp(
