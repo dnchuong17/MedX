@@ -12,7 +12,7 @@ export default function Home() {
     // You can add any app initialization logic here
     const initTimeout = setTimeout(() => {
       setLoading(false)
-    }, 3000)
+    }, 300000)
 
     return () => clearTimeout(initTimeout)
   }, [])

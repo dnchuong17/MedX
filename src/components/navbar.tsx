@@ -1,38 +1,46 @@
-"use client";
+"use client"
 
-import React from 'react';
-import { Home, User, Calendar } from 'lucide-react';
-import Link from 'next/link';
+import React from "react"
+import { Home, User, Calendar } from "lucide-react"
+import Link from "next/link"
 
 interface BottomNavigationProps {
-    activeItem?: 'home' | 'profile' | 'calendar';
+  activeItem?: "home" | "profile" | "booking"
 }
 
-const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeItem = 'home' }) => {
-    return (
-        <div className="w-">
-        <nav className="fixed bottom-0 left-0 right-0 bg-indigo-700 px-4 py-2 flex justify-around">
-            <Link
-                href="/"
-                className={`flex-1 flex flex-col items-center justify-center p-1 ${activeItem === 'home' ? 'text-white' : 'text-white/70'}`}
-            >
-                <Home className="w-6 h-6" />
-            </Link>
-            <Link
-                href="/profile"
-                className={`flex-1 flex flex-col items-center justify-center p-1 ${activeItem === 'profile' ? 'text-white' : 'text-white/70'}`}
-            >
-                <User className="h-6 w-6" />
-            </Link>
-            <Link
-                href="/calendar"
-                className={`flex-1 flex flex-col items-center justify-center p-1 ${activeItem === 'calendar' ? 'text-white' : 'text-white/70'}`}
-            >
-                <Calendar className="w-6 h-6" />
-            </Link>
-        </nav>
-        </div>
-    );
-};
+const navItems = [
+  { key: "home", href: "/", icon: Home },
+  { key: "profile", href: "/profile", icon: User },
+  { key: "booking", href: "/booking", icon: Calendar },
+] as const
 
-export default BottomNavigation;
+export function BottomNavigation({
+  activeItem = "home",
+}: BottomNavigationProps) {
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 ">
+      <nav className="flex items-center justify-between bg-neutral-900/40 rounded-full shadow-xl px-4 py-2 min-w-[200px] max-w-xs mx-auto backdrop-blur-xs">
+        {navItems.map(({ key, href, icon: Icon }) => (
+          <Link
+            key={key}
+            href={href}
+            aria-label={key}
+            className="flex-1 flex justify-center"
+          >
+            <div
+              className={`flex items-center justify-center w-10 h-10 transition-colors ${
+                activeItem === key
+                  ? "bg-white text-purple-600 shadow-md"
+                  : "text-white/70"
+              } rounded-full`}
+            >
+              <Icon className="w-6 h-6" />
+            </div>
+          </Link>
+        ))}
+      </nav>
+    </div>
+  )
+}
+
+export default BottomNavigation
