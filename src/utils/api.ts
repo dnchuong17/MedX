@@ -1,26 +1,100 @@
-import axios from 'axios';
+import axios from "axios"
+import {
+  RegisterByEmailInput,
+  LoginInput,
+  VerifyOtpInput,
+  AuthResponse,
+  VerifyOtpResponse,
+  LoginWalletInput,
+  RegisterWalletInput,
+} from "./interface"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+const apiClient = axios.create({
+  baseURL: "http://localhost:3000",
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+})
 
-export const registerByEmail = async (data: {
-    email: string;
-    password: string;
-    name: string
-}) => {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/auth/register`, data);
-        return response.data;
-    } catch (error: any) {
-        throw error.response?.data || error.message;
+export async function registerByEmail(
+  data: RegisterByEmailInput
+): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>("/auth/register", data)
+    if (response.status === 200 || response.status === 201) {
+      return response.data
     }
-};
+    throw new Error(`Unexpected response code: ${response.status}`)
+  } catch (error) {
+    console.error("Error registering by email:", error)
+    throw error
+  }
+}
 
-export const verifyOtp = async (data: { email: string; otp: string }) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/email-verify`, data);
-    return response.data;
-};
+export async function registerWallet(
+  data: RegisterWalletInput
+): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>(
+      "/auth/register-wallet",
+      data
+    )
+    if (response.status === 200 || response.status === 201) {
+      return response.data
+    }
+    throw new Error(`Unexpected response code: ${response.status}`)
+  } catch (error) {
+    console.error("Error registering by wallet:", error)
+    throw error
+  }
+}
 
-export const loginUser = async (data: { email: string; password: string }) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/login`, data);
-    return response.data;
-};
+export async function verifyOtp(
+  data: VerifyOtpInput
+): Promise<VerifyOtpResponse> {
+  try {
+    const response = await apiClient.post<VerifyOtpResponse>(
+      "/auth/email-verify",
+      data
+    )
+    if (response.status === 200 || response.status === 201) {
+      return response.data
+    }
+    throw new Error(`Unexpected response code: ${response.status}`)
+  } catch (error) {
+    console.error("Error verifying OTP:", error)
+    throw error
+  }
+}
+
+export async function loginUser(data: LoginInput): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>("/auth/login", data)
+    if (response.status === 200 || response.status === 201) {
+      return response.data
+    }
+    throw new Error(`Unexpected response code: ${response.status}`)
+  } catch (error) {
+    console.error("Error logging in:", error)
+    throw error
+  }
+}
+
+export async function loginWallet(
+  data: LoginWalletInput
+): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>(
+      "/auth/login-wallet",
+      data
+    )
+    if (response.status === 200 || response.status === 201) {
+      return response.data
+    }
+    throw new Error(`Unexpected response code: ${response.status}`)
+  } catch (error) {
+    console.error("Error logging in with wallet:", error)
+    throw error
+  }
+}
