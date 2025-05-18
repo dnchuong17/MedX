@@ -10,6 +10,7 @@ interface BottomNavigationProps {
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeItem = 'home' }) => {
     return (
+        <div className="w-">
         <nav className="fixed bottom-0 left-0 right-0 bg-indigo-700 px-4 py-2 flex justify-around">
             <Link
                 href="/"
@@ -30,6 +31,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeItem = 'home'
                 <Calendar className="w-6 h-6" />
             </Link>
         </nav>
+        </div>
     );
 };
 

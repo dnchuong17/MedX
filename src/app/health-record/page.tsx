@@ -5,13 +5,10 @@ import {
     Search,
     Settings,
     Plus,
-    Home,
-    MessageCircle,
-    User,
-    FileText,
+
     ChevronDown,
 } from "lucide-react";
-
+import BottomNavigation from "@/components/navbar";
 export default function HealthRecordsApp() {
     const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
     const [filterOption, setFilterOption] = useState("all");
@@ -291,15 +288,7 @@ export default function HealthRecordsApp() {
                     </button>
                 </div>
 
-                {/* Bottom Nav */}
-                <div className="absolute bottom-0 left-0 right-0 bg-indigo-600 rounded-t-3xl p-4">
-                    <div className="flex justify-around">
-                        <Home className="text-white w-6 h-6" />
-                        <MessageCircle className="text-white w-6 h-6" />
-                        <User className="text-white w-6 h-6" />
-                        <FileText className="text-white w-6 h-6" />
-                    </div>
-                </div>
+                <BottomNavigation />
             </div>
         </div>
     );
