@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, User, Calendar, Ruler, Weight, Loader2 } from 'lucide-react';
-import { getCurrentUser, updateUserProfile } from '../../../utils/api';
+import { getCurrentUser, updateUserProfile, setAuthToken } from '../../../utils/api';
 import { useRouter } from 'next/navigation';
 
 export default function HealthProfileSetup() {
@@ -22,7 +22,7 @@ export default function HealthProfileSetup() {
     });
 
     const [userId, setUserId] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Start with loading true
     const [updateSuccess, setUpdateSuccess] = useState(false);
     const [error, setError] = useState('');
 
@@ -71,23 +71,37 @@ export default function HealthProfileSetup() {
     const currentStepData = steps[currentStep];
 
     useEffect(() => {
+        // Ensure token is set from localStorage at component mount
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            setError("Authentication token not found. Please log in again.");
+            setLoading(false);
+            // Optionally redirect to login page
+            // router.push('/auth/login');
+            return;
+        }
+
+        // Set the token in API client headers
+        setAuthToken(token);
+
         async function fetchCurrentUser() {
             try {
-                setLoading(true);
                 const userData = await getCurrentUser();
+                console.log("User data received:", userData);
 
                 if (!userData || !userData.id) {
-                    throw new Error("User data không hợp lệ.");
+                    throw new Error("Invalid user data received.");
                 }
 
                 setUserId(userData.id);
 
-                // Nếu user đã có đủ dữ liệu -> redirect luôn
+                // If user already has all required data -> redirect
                 if (userData.age && userData.gender && userData.height && userData.weight) {
                     router.push('/');
                     return;
                 }
 
+                // Update profile data with existing user data
                 setProfileData(prev => ({
                     ...prev,
                     age: userData.age ? Number(userData.age) : null,
@@ -97,9 +111,19 @@ export default function HealthProfileSetup() {
                 }));
 
                 setLoading(false);
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to fetch user data:", err);
-                setError("Failed to load your profile. Please try again later.");
+
+                // Handle unauthorized errors specifically
+                if (err?.response?.status === 401) {
+                    setError("Your session has expired. Please log in again.");
+                    localStorage.removeItem('accessToken');
+                    // Optionally redirect to login
+                    // router.push('/auth/login');
+                } else {
+                    setError("Failed to load your profile. Please try again later.");
+                }
+
                 setLoading(false);
             }
         }
@@ -116,7 +140,6 @@ export default function HealthProfileSetup() {
         }));
     };
 
-
     const saveProfileData = async () => {
         if (!userId) {
             setError("User ID not available. Please log in again.");
@@ -125,13 +148,29 @@ export default function HealthProfileSetup() {
 
         try {
             setLoading(true);
-            await updateUserProfile(userId, profileData);
+            console.log("Updating user profile with data:", profileData);
+            console.log("User ID:", userId);
+
+            const result = await updateUserProfile(userId, profileData);
+            console.log("Profile update result:", result);
+
             setUpdateSuccess(true);
             setLoading(false);
             return true;
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to update profile:", err);
-            setError("Failed to save your profile. Please try again.");
+
+            // Handle different error scenarios
+            if (err?.response?.status === 401) {
+                setError("Your session has expired. Please log in again.");
+                localStorage.removeItem('accessToken');
+                // router.push('/auth/login');
+            } else if (err?.response?.status === 400) {
+                setError(err?.response?.data?.message || "Invalid profile data. Please check your inputs.");
+            } else {
+                setError("Failed to save your profile. Please try again.");
+            }
+
             setLoading(false);
             return false;
         }
@@ -158,7 +197,6 @@ export default function HealthProfileSetup() {
         const value = profileData[currentStepData.id as keyof typeof profileData];
         return value !== null && value !== '';
     };
-
 
     const progressPercentage = ((currentStep + 1) / steps.length) * 100;
 
@@ -206,23 +244,31 @@ export default function HealthProfileSetup() {
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
                     <p className="text-gray-600 mb-6">{error}</p>
-                    <button
-                        onClick={() => {
-                            setError('');
-                            window.location.reload();
-                        }}
-                        className="bg-indigo-600 text-white font-medium py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors"
-                    >
-                        Try Again
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                setError('');
+                                window.location.reload();
+                            }}
+                            className="flex-1 bg-indigo-600 text-white font-medium py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                        {(error.includes("session") || error.includes("token") || error.includes("log in")) && (
+                            <button
+                                onClick={() => router.push('/auth/login')}
+                                className="flex-1 bg-gray-200 text-gray-800 font-medium py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors"
+                            >
+                                Back to Login
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         );
     }
 
-
-
-return (
+    return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Header */}
@@ -263,7 +309,7 @@ return (
                             <div className="relative">
                                 <input
                                     type="number"
-                                    value={profileData[currentStepData.id]}
+                                    value={profileData[currentStepData.id as keyof typeof profileData] || ''}
                                     onChange={(e) => handleInputChange(e.target.value)}
                                     placeholder={currentStepData.placeholder}
                                     className="w-full p-4 text-center text-xl font-semibold border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
@@ -281,7 +327,7 @@ return (
                                         key={option.value}
                                         onClick={() => handleInputChange(option.value)}
                                         className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-between ${
-                                            profileData[currentStepData.id] === option.value
+                                            profileData[currentStepData.id as keyof typeof profileData] === option.value
                                                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                                                 : 'border-gray-200 hover:border-gray-300 text-gray-700'
                                         }`}
@@ -290,7 +336,7 @@ return (
                                             <span className="text-2xl mr-3">{option.emoji}</span>
                                             <span className="font-medium">{option.label}</span>
                                         </div>
-                                        {profileData[currentStepData.id] === option.value && (
+                                        {profileData[currentStepData.id as keyof typeof profileData] === option.value && (
                                             <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
                                                 <div className="w-2 h-2 bg-white rounded-full"></div>
                                             </div>

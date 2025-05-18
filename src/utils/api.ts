@@ -102,30 +102,40 @@ export async function verifyOtp(data: VerifyOtpInput): Promise<VerifyOtpResponse
 
 export async function loginUser(data: LoginInput): Promise<AuthResponse> {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/login", data);
+    const response = await apiClient.post<string | AuthResponse>("/auth/login", data);
 
-    // Check if response.data exists
+    // Check if response exists
     if (!response.data) {
       throw new Error("Empty response received from server");
     }
 
-    const token = response.data.token;
+    let token: string;
 
-    // Log the response structure to debug
-    console.log("Login response data:", JSON.stringify(response.data));
-
-    if (!token) {
+    // Handle both string token and object with token property formats
+    if (typeof response.data === 'string') {
+      // The API returned the token directly as a string
+      token = response.data;
+      console.log("Received direct token string");
+    } else if (response.data.token) {
+      // The API returned an object with a token property
+      token = response.data.token;
+      console.log("Received token from object property");
+    } else {
       // More detailed error message for debugging
       throw new Error(`Token not found in response. Response data: ${JSON.stringify(response.data)}`);
     }
 
+    // Store the token and set auth header
     localStorage.setItem("accessToken", token);
     setAuthToken(token);
 
     console.log("Login token:", token);
     console.log("Token in localStorage:", localStorage.getItem("accessToken"));
 
-    return response.data;
+    // Return a proper AuthResponse
+    return typeof response.data === 'string'
+        ? { token, user: null } // If string, create a minimal AuthResponse
+        : response.data;        // If object, return as is
   } catch (error) {
     console.error("Error logging in:", error);
 
@@ -158,27 +168,65 @@ export async function loginWallet(data: LoginWalletInput): Promise<AuthResponse>
 }
 
 
-// Lấy thông tin user hiện tại
 export async function getCurrentUser(): Promise<User> {
   try {
+    // Check if token exists before making request
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+
+    // Ensure token is set in headers
+    setAuthToken(token);
+
     const response = await apiClient.get<User>("/user/me");
+    console.log("Current user data retrieved:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching current user:", error);
+
+    // Handle unauthorized errors
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem("accessToken");
+      setAuthToken(null);
+      throw new Error("Your session has expired. Please log in again.");
+    }
+
     throw error;
   }
 }
 
 // Cập nhật profile user
+// Update user profile
 export async function updateUserProfile(
     userId: string,
     profileData: UpdateUserInput
 ): Promise<UpdateUserResponse> {
   try {
-    const response = await apiClient.patch<UpdateUserResponse>(`/user/${userId}`, profileData);
+    // Check if token exists before making request
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+
+    // Ensure token is set in headers
+    setAuthToken(token);
+
+    console.log(`Updating user ${userId} with data:`, profileData);
+    const response = await apiClient.put<UpdateUserResponse>(`/user/${userId}`, profileData);
+    console.log("Profile update successful:", response.data);
     return response.data;
   } catch (error: any) {
     console.error("Error updating user profile:", error?.response?.data || error.message);
+
+    // Handle unauthorized errors
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem("accessToken");
+      setAuthToken(null);
+    }
+
     throw error;
   }
 }

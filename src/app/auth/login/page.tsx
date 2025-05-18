@@ -102,7 +102,7 @@ export default function LoginPage() {
       console.log("Token in localStorage:", localStorage.getItem("accessToken"))
 
       // Redirect to verification page
-      router.push("/auth/verification")
+      router.push("/profile/set-up")
     } catch (err: any) {
       // Enhanced error handling
       console.error("Login error details:", err)
