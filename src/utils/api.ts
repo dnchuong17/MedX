@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios from "axios";
 import {
   RegisterByEmailInput,
   LoginInput,
@@ -10,9 +10,8 @@ import {
   UpdateUserInput,
   UpdateUserResponse,
   User,
-} from "./interface";
   RegisterByPhoneInput,
-} from "./interface"
+} from "./interface";
 
 // Tạo Axios instance
 export const apiClient = axios.create({
@@ -55,33 +54,39 @@ export async function registerWallet(data: RegisterWalletInput): Promise<AuthRes
     console.error("Error registering by wallet:", error);
     throw error;
   }
-export async function registerByPhone(
-  data: RegisterByPhoneInput
-): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/auth/phone", data)
-  return response.data
 }
 
-export async function setEmailAfterPhone(
-  phone: string,
-  email: string
-): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/auth/set-email", {
-    phone,
-    email,
-  })
-  return response.data
+// Đăng ký bằng số điện thoại
+export async function registerByPhone(data: RegisterByPhoneInput): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>("/auth/phone", data);
+    return response.data;
+  } catch (error) {
+    console.error("Error registering by phone:", error);
+    throw error;
+  }
 }
 
-export async function loginByPhone(
-  phone: string,
-  password: string
-): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/auth/login-phone", {
-    phone,
-    password,
-  })
-  return response.data
+// Gán email sau khi đăng ký bằng số điện thoại
+export async function setEmailAfterPhone(phone: string, email: string): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>("/auth/set-email", { phone, email });
+    return response.data;
+  } catch (error) {
+    console.error("Error setting email after phone:", error);
+    throw error;
+  }
+}
+
+// Đăng nhập bằng số điện thoại
+export async function loginByPhone(phone: string, password: string): Promise<AuthResponse> {
+  try {
+    const response = await apiClient.post<AuthResponse>("/auth/login-phone", { phone, password });
+    return response.data;
+  } catch (error) {
+    console.error("Error logging in by phone:", error);
+    throw error;
+  }
 }
 
 // Xác minh OTP
@@ -98,30 +103,52 @@ export async function verifyOtp(data: VerifyOtpInput): Promise<VerifyOtpResponse
 export async function loginUser(data: LoginInput): Promise<AuthResponse> {
   try {
     const response = await apiClient.post<AuthResponse>("/auth/login", data);
+
+    // Check if response.data exists
+    if (!response.data) {
+      throw new Error("Empty response received from server");
+    }
+
     const token = response.data.token;
 
-    console.log("Login token:", token); // <-- Thêm dòng này để hiển thị token
+    // Log the response structure to debug
+    console.log("Login response data:", JSON.stringify(response.data));
+
+    if (!token) {
+      // More detailed error message for debugging
+      throw new Error(`Token not found in response. Response data: ${JSON.stringify(response.data)}`);
+    }
 
     localStorage.setItem("accessToken", token);
     setAuthToken(token);
 
+    console.log("Login token:", token);
+    console.log("Token in localStorage:", localStorage.getItem("accessToken"));
+
     return response.data;
   } catch (error) {
     console.error("Error logging in:", error);
+
+    // Check if it's an Axios error with a response
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("API response error:", error.response.data);
+      throw new Error(error.response.data?.message || "Authentication failed");
+    }
+
     throw error;
   }
 }
-
 
 export async function loginWallet(data: LoginWalletInput): Promise<AuthResponse> {
   try {
     const response = await apiClient.post<AuthResponse>("/auth/login-wallet", data);
     const token = response.data.token;
 
-    console.log("Wallet login token:", token); // <-- Thêm dòng này
-
     localStorage.setItem("accessToken", token);
     setAuthToken(token);
+
+    console.log("Wallet login token:", token);
+    console.log("Token in localStorage:", localStorage.getItem("accessToken"));
 
     return response.data;
   } catch (error) {
@@ -131,6 +158,7 @@ export async function loginWallet(data: LoginWalletInput): Promise<AuthResponse>
 }
 
 
+// Lấy thông tin user hiện tại
 export async function getCurrentUser(): Promise<User> {
   try {
     const response = await apiClient.get<User>("/user/me");
@@ -141,6 +169,7 @@ export async function getCurrentUser(): Promise<User> {
   }
 }
 
+// Cập nhật profile user
 export async function updateUserProfile(
     userId: string,
     profileData: UpdateUserInput
