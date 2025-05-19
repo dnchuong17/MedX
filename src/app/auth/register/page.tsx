@@ -73,7 +73,7 @@ const RegisterPageContent = () => {
       setIsLoading(false)
       setStep("setPassword")
     } else {
-      // Email registration flow
+      // Email registration flow - now goes to OTP verification step
       try {
         // Validate password and confirmPassword
         if (!password || password !== confirmPassword) {
@@ -85,10 +85,12 @@ const RegisterPageContent = () => {
           return
         }
         await registerByEmail({ email, password, name: fullName })
-        setFeedback({ type: "success", message: "Registration successful!" })
+        setFeedback({ type: "success", message: "Registration successful! Please verify your email." })
+        // Instead of redirecting to verification page, go to OTP step
         setTimeout(() => {
-          router.push("/profile/set-up")
-        }, 1200)
+          setFeedback(null)
+          setStep("verifyOtp")
+        }, 1500)
       } catch (err: any) {
         setFeedback({
           type: "error",
@@ -220,7 +222,7 @@ const RegisterPageContent = () => {
         })
 
         setTimeout(() => {
-          router.push("/profile/set-up")
+          router.push("/auth/verification")
         }, 1200)
       } else {
         throw new Error("No token received from server")
@@ -250,8 +252,6 @@ const RegisterPageContent = () => {
       setWalletLoading(false)
     }
   }, [connected, publicKey, signMessage, router])
-
-  // Animated feedback/toast
   function FeedbackToast() {
     const displayMessage = feedback?.message || walletError;
     const displayType = feedback?.type || "error";
