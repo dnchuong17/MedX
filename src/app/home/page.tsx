@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -11,6 +11,7 @@ import {
   Users,
   Clock,
   LogOut,
+  Edit2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { FaUserCircle } from "react-icons/fa"
@@ -25,6 +26,7 @@ import {
   calculateDailyCalories,
   calculateIdealWeight,
 } from "@/utils/healthMetrics"
+import { getCurrentUser, updateUserProfile } from "@/utils/api"
 
 interface HealthMetric {
   title: string
@@ -41,7 +43,54 @@ interface Challenge {
 }
 
 const HomePage = () => {
+  const router = useRouter()
   const profile = useSelector((state: RootState) => state.profile)
+  const [userName, setUserName] = useState<string>("")
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newName, setNewName] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      router.push("/auth/login")
+      return
+    }
+
+    async function fetchUserData() {
+      try {
+        const userData = await getCurrentUser()
+        setUserName(userData.name || "")
+        setNewName(userData.name || "")
+      } catch (error) {
+        console.error("Failed to fetch user data:", error)
+        if (
+          error instanceof Error &&
+          error.message.includes("No authentication token found")
+        ) {
+          router.push("/auth/login")
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [router])
+
+  const handleUpdateName = async () => {
+    if (!newName.trim()) return
+
+    try {
+      const userData = await getCurrentUser()
+      await updateUserProfile(userData.id.toString(), { name: newName.trim() })
+      setUserName(newName.trim())
+      setIsEditingName(false)
+    } catch (error) {
+      console.error("Failed to update name:", error)
+      alert("Failed to update name. Please try again.")
+    }
+  }
 
   const bmi = calculateBMI(profile.height, profile.weight)
   const bmr = calculateBMR(profile)
@@ -88,11 +137,9 @@ const HomePage = () => {
     },
   ]
 
-  const router = useRouter()
-
   function handleLogout() {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("token")
+      localStorage.removeItem("accessToken")
       router.push("/auth/login")
     }
   }
@@ -116,7 +163,49 @@ const HomePage = () => {
             transition={{ type: "spring", stiffness: 200 }}
           >
             <p className="text-sm text-gray-500">Hi, Welcome Back</p>
-            <p className="text-sm font-semibold text-blue-600">John Doe</p>
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="text-sm font-semibold text-blue-600 bg-transparent border-b border-blue-300 focus:outline-none focus:border-blue-600 w-32"
+                  placeholder="Enter your name"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleUpdateName()
+                    }
+                  }}
+                />
+                <button
+                  onClick={handleUpdateName}
+                  className="text-xs text-green-600 hover:text-green-700"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingName(false)
+                    setNewName(userName)
+                  }}
+                  className="text-xs text-red-600 hover:text-red-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-blue-600">
+                  {loading ? "Loading..." : userName || "Guest"}
+                </p>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="text-gray-400 hover:text-blue-600 transition-colors"
+                >
+                  <Edit2 size={14} />
+                </button>
+              </div>
+            )}
           </motion.div>
         </div>
         <motion.div
