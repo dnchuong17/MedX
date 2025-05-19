@@ -9,12 +9,14 @@ import {
     ChevronDown,
 } from "lucide-react";
 import BottomNavigation from "@/components/navbar";
+import {useRouter} from "next/navigation";
 export default function HealthRecordsApp() {
     const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
     const [filterOption, setFilterOption] = useState("all");
     const [sortOption, setSortOption] = useState("date-newest");
     const [filteredRecords, setFilteredRecords] = useState<any[]>([]);
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+    const router = useRouter()
 
     const initialRecords = [
         {
@@ -78,6 +80,10 @@ export default function HealthRecordsApp() {
         setSortOption(option);
         setOpenDropdown(null);
     };
+
+    const handleClick = () => {
+        router.push('/health-record/temporary-link')
+    }
 
     useEffect(() => {
         let filtered = [...initialRecords];
@@ -283,7 +289,9 @@ export default function HealthRecordsApp() {
 
                 {/* Add Button */}
                 <div className="absolute right-8 bottom-24">
-                    <button className="bg-indigo-600 rounded-full p-3 shadow-lg hover:bg-indigo-700 transition-colors">
+                    <button
+                        onClick={handleClick}
+                        className="bg-indigo-600 rounded-full p-3 shadow-lg hover:bg-indigo-700 transition-colors">
                         <Plus className="text-white w-8 h-8" />
                     </button>
                 </div>

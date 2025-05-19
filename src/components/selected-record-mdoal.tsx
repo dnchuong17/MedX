@@ -20,7 +20,7 @@ const SelectedRecordModal: React.FC<SelectedRecordModalProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-30"
+                    className="fixed inset-0 z-50 flex items-end justify-center bg-opacity-30"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
