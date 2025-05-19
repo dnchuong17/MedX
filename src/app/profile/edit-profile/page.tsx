@@ -119,11 +119,6 @@ export default function EditProfile() {
     }
   }
 
-  const handlePhotoChange = () => {
-    // Handle photo upload logic here
-    console.log("Photo change requested")
-    alert("Photo upload feature will be implemented soon!")
-  }
 
   if (loading) {
     return (

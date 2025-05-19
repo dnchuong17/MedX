@@ -20,7 +20,7 @@ import {
 } from "react-icons/fa"
 import { getCurrentUser } from "@/utils/api"
 import type { User } from "@/utils/interface"
-
+import { BarLoader } from "react-spinners"
 interface MenuItemProps {
   icon: React.ReactNode
   label: string
@@ -82,7 +82,8 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <span className="text-lg text-gray-500">Loading profile...</span>
+        <BarLoader color="#6C4FF7" />
+        <span className="text-sm text-gray-500">Loading profile...</span>
       </div>
     )
   }
@@ -90,7 +91,7 @@ export default function ProfilePage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <span className="text-lg text-red-500">{error}</span>
+        <span className="text-lg font-bold text-red-500">{error}</span>
         <button
           onClick={() => router.push("/auth/login")}
           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg"

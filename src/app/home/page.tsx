@@ -8,7 +8,7 @@ import {
   Settings,
   User,
   MessageCircle,
-  Users,
+  File,
   Clock,
   LogOut,
 } from "lucide-react"
@@ -163,6 +163,52 @@ const HomePage = () => {
           ))}
         </div>
 
+        {/* Quick Access */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200 }}
+          className="mb-6"
+        >
+          <h2 className="font-semibold text-gray-800 mb-2">Quick Access</h2>
+          <div className="grid grid-cols-3 gap-2 ">
+            {[
+              {
+                href: "/profile",
+                label: "Profile",
+                icon: <User className="h-5 w-5 text-gray-600" />,
+              },
+              {
+                href: "/chat",
+                label: "AI Chatbot",
+                icon: <MessageCircle className="h-5 w-5 text-gray-600" />,
+              },
+              {
+                href: "/health-record",
+                label: "Health Records",
+                icon: <File className="h-5 w-5 text-gray-600" />,
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.href}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <Link
+                  href={item.href}
+                  className="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-4 focus:ring-2 focus:ring-indigo-400 outline-none shadow-lg"
+                >
+                  <div className="bg-gray-200 p-2 rounded-full mb-1">
+                    {item.icon}
+                  </div>
+                  <span className="text-xs">{item.label}</span>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
         {/* Health News */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -250,47 +296,6 @@ const HomePage = () => {
                     style={{ width: `${challenge.progress}%` }}
                   ></div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Access */}
-        <div>
-          <h2 className="font-semibold text-gray-800 mb-2">Quick Access</h2>
-          <div className="grid grid-cols-3 gap-2 ">
-            {[
-              {
-                href: "/profile",
-                label: "Profile",
-                icon: <User className="h-5 w-5 text-gray-600" />,
-              },
-              {
-                href: "/chatbot",
-                label: "Chatbot",
-                icon: <MessageCircle className="h-5 w-5 text-gray-600" />,
-              },
-              {
-                href: "/community",
-                label: "Community",
-                icon: <Users className="h-5 w-5 text-gray-600" />,
-              },
-            ].map((item) => (
-              <motion.div
-                key={item.href}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <Link
-                  href={item.href}
-                  className="flex flex-col items-center justify-center bg-gray-100 rounded-lg py-4 focus:ring-2 focus:ring-indigo-400 outline-none shadow-lg"
-                >
-                  <div className="bg-gray-200 p-2 rounded-full mb-1">
-                    {item.icon}
-                  </div>
-                  <span className="text-xs">{item.label}</span>
-                </Link>
               </motion.div>
             ))}
           </div>

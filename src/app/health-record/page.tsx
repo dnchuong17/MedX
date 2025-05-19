@@ -14,7 +14,16 @@ export default function HealthRecordsApp() {
     const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
     const [filterOption, setFilterOption] = useState("all");
     const [sortOption, setSortOption] = useState("date-newest");
-    const [filteredRecords, setFilteredRecords] = useState<any[]>([]);
+    const [filteredRecords, setFilteredRecords] = useState<{
+        id: number;
+        title: string;
+        date: string;
+        doctor?: string;
+        lab?: string;
+        type: string;
+        location: string;
+        status: string;
+    }[]>([]);
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
     const router = useRouter()
 
