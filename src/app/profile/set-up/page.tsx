@@ -202,10 +202,10 @@ export default function HealthProfileSetup() {
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile Updated!</h2>
                     <p className="text-gray-600 mb-6">Your health profile has been successfully updated.</p>
                     <button
-                        onClick={() => router.push('/dashboard')}
+                        onClick={() => router.push('/home')}
                         className="bg-indigo-600 text-white font-medium py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors"
                     >
-                        Go to Dashboard
+                        Go to Home
                     </button>
                 </div>
             </div>
