@@ -222,7 +222,7 @@ const RegisterPageContent = () => {
         })
 
         setTimeout(() => {
-          router.push("/auth/verification")
+          router.push("/home")
         }, 1200)
       } else {
         throw new Error("No token received from server")
