@@ -71,65 +71,46 @@ export default function HealthProfileSetup() {
     const currentStepData = steps[currentStep];
 
     useEffect(() => {
-        // Ensure token is set from localStorage at component mount
         const token = localStorage.getItem('accessToken');
         if (!token) {
             setError("Authentication token not found. Please log in again.");
             setLoading(false);
-            // Optionally redirect to login page
-            // router.push('/auth/login');
             return;
         }
 
-        // Set the token in API client headers
         setAuthToken(token);
 
         async function fetchCurrentUser() {
             try {
                 const userData = await getCurrentUser();
-                console.log("User data received:", userData);
-
-                if (!userData || !userData.id) {
-                    throw new Error("Invalid user data received.");
-                }
+                if (!userData?.id) throw new Error("Invalid user data");
 
                 setUserId(userData.id);
 
-                // If user already has all required data -> redirect
-                if (userData.age && userData.gender && userData.height && userData.weight) {
-                    router.push('/');
-                    return;
-                }
-
-                // Update profile data with existing user data
                 setProfileData(prev => ({
                     ...prev,
-                    age: userData.age ? Number(userData.age) : null,
-                    gender: userData.gender || '',
-                    height: userData.height ? Number(userData.height) : null,
-                    weight: userData.weight ? Number(userData.weight) : null
+                    age: userData.age ?? null,
+                    gender: userData.gender ?? '',
+                    height: userData.height ?? null,
+                    weight: userData.weight ?? null,
                 }));
 
-                setLoading(false);
-            } catch (err: any) {
-                console.error("Failed to fetch user data:", err);
-
-                // Handle unauthorized errors specifically
-                if (err?.response?.status === 401) {
-                    setError("Your session has expired. Please log in again.");
-                    localStorage.removeItem('accessToken');
-                    // Optionally redirect to login
-                    // router.push('/auth/login');
+                // Nếu đã đủ dữ liệu thì chuyển thẳng tới Dashboard
+                if (userData.age && userData.gender && userData.height && userData.weight) {
+                    router.push('/dashboard');
                 } else {
-                    setError("Failed to load your profile. Please try again later.");
+                    setLoading(false);
                 }
-
+            } catch (err) {
+                console.error(err);
+                setError("Unable to load profile. Please login again.");
                 setLoading(false);
             }
         }
 
         fetchCurrentUser();
     }, [router]);
+
 
     const handleInputChange = (value: string) => {
         const key = currentStepData.id;
@@ -160,7 +141,6 @@ export default function HealthProfileSetup() {
         } catch (err: any) {
             console.error("Failed to update profile:", err);
 
-            // Handle different error scenarios
             if (err?.response?.status === 401) {
                 setError("Your session has expired. Please log in again.");
                 localStorage.removeItem('accessToken');
@@ -284,7 +264,6 @@ export default function HealthProfileSetup() {
                     </p>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
                     <div
                         className="bg-indigo-600 h-2 rounded-full transition-all duration-300 ease-out"
@@ -292,7 +271,6 @@ export default function HealthProfileSetup() {
                     ></div>
                 </div>
 
-                {/* Main Content */}
                 <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
                     <div className="text-center mb-6">
                         <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -303,7 +281,6 @@ export default function HealthProfileSetup() {
                         </p>
                     </div>
 
-                    {/* Input/Selection Area */}
                     <div className="mb-8">
                         {currentStepData.type === 'input' ? (
                             <div className="relative">

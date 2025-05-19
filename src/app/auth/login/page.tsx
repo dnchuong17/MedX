@@ -51,7 +51,6 @@ export default function LoginPage() {
     }
   }, [connected, publicKey])
 
-  // Reset form fields and errors when changing tabs
   useEffect(() => {
     setError(null)
     setPassword("")
@@ -61,20 +60,17 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
 
-    // Email validation
     if (!email) {
       setError("Email is required.")
       return
     }
 
-    // Simple email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.")
       return
     }
 
-    // Password validation
     if (!password) {
       setError("Password is required.")
       return
@@ -84,16 +80,13 @@ export default function LoginPage() {
     try {
       const response = await loginUser({ email, password })
 
-      // Check the whole response object
       console.log("Login response:", response)
 
-      // Check if token exists
       if (!response || !response.token) {
         setError("No authentication token received. Please try again.")
         return
       }
 
-      // Set token in localStorage and auth header
       const token = response.token
       localStorage.setItem("accessToken", token)
       setAuthToken(token)
@@ -101,13 +94,10 @@ export default function LoginPage() {
       console.log("Login token:", token)
       console.log("Token in localStorage:", localStorage.getItem("accessToken"))
 
-      // Redirect to verification page
       router.push("/profile/set-up")
     } catch (err: any) {
-      // Enhanced error handling
       console.error("Login error details:", err)
 
-      // Provide a more specific error message if possible
       if (err?.response?.data?.message) {
         setError(err.response.data.message)
       } else if (err.message) {
@@ -124,20 +114,17 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
 
-    // Phone validation
     if (!phone) {
       setError("Phone number is required.")
       return
     }
 
-    // Simple phone format validation (accepts international format)
     const phoneRegex = /^\+?[0-9\s\-()]{8,20}$/
     if (!phoneRegex.test(phone)) {
       setError("Please enter a valid phone number.")
       return
     }
 
-    // Password validation
     if (!password) {
       setError("Password is required.")
       return
@@ -145,10 +132,8 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      // Format phone number by removing spaces and other characters
       const formattedPhone = phone.replace(/\s+/g, "")
 
-      // Using the proper loginByPhone function instead of loginUser
       const response = await loginByPhone(formattedPhone, password)
 
       const token = response.token
