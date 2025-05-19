@@ -144,7 +144,7 @@ export default function LoginPage() {
         console.log("Login token:", token)
         console.log("Token in localStorage:", localStorage.getItem("accessToken"))
 
-        router.push("/auth/verification")
+        router.push("/profile/set-up")
       } else {
         throw new Error("No token received from server")
       }
@@ -182,7 +182,6 @@ export default function LoginPage() {
       try {
         signatureUint8 = await signMessage(encodedMessage)
       } catch (signErr: any) {
-        // Handle user rejection of signature request
         if (signErr.message?.includes("User rejected")) {
           setError("You declined to sign the authentication message.")
         } else {
@@ -194,7 +193,6 @@ export default function LoginPage() {
 
       const signature = bs58.encode(signatureUint8)
 
-      // Using the proper loginWallet function
       const response = await loginWallet({
         wallet_address: publicKey.toBase58(),
         message,
@@ -220,7 +218,6 @@ export default function LoginPage() {
     }
   }
 
-  // Reusable login form component
   const LoginForm: React.FC<LoginFormProps> = ({
                                                  onSubmit,
                                                  error,

@@ -73,13 +73,48 @@ export async function setEmailAfterPhone(phone: string, email: string): Promise<
 
 export async function loginByPhone(phone: string, password: string): Promise<AuthResponse> {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/login-phone", { phone, password });
-    return response.data;
+    const response = await apiClient.post<string | AuthResponse>("/auth/login-phone", {
+      phone,
+      password,
+    });
+
+    if (!response.data) {
+      throw new Error("Empty response received from server");
+    }
+
+    let token: string;
+
+    if (typeof response.data === "string") {
+      token = response.data;
+      console.log("Received direct token string from phone login");
+    } else if (response.data.token) {
+      token = response.data.token;
+      console.log("Received token from phone login response object");
+    } else {
+      throw new Error(`Token not found in response. Response data: ${JSON.stringify(response.data)}`);
+    }
+
+    localStorage.setItem("accessToken", token);
+    setAuthToken(token);
+
+    console.log("Phone login token:", token);
+    console.log("Token in localStorage:", localStorage.getItem("accessToken"));
+
+    return typeof response.data === "string"
+        ? { token, user: null }
+        : response.data;
   } catch (error) {
     console.error("Error logging in by phone:", error);
+
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("API response error:", error.response.data);
+      throw new Error(error.response.data?.message || "Authentication failed");
+    }
+
     throw error;
   }
 }
+
 
 export async function verifyOtp(data: VerifyOtpInput): Promise<VerifyOtpResponse> {
   try {
