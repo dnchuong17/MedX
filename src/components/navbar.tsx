@@ -5,14 +5,14 @@ import { Home, User, Calendar, MessageCircle } from "lucide-react"
 import Link from "next/link"
 
 interface BottomNavigationProps {
-  activeItem?: "home" | "profile" | "chat" | "booking"
+  activeItem?: "home" | "profile" | "chat" | "health-record"
 }
 
 const navItems = [
   { key: "home", href: "/", icon: Home },
   { key: "profile", href: "/profile", icon: User },
   { key: "chat", href: "/chat", icon: MessageCircle },
-  { key: "booking", href: "/booking", icon: Calendar },
+  { key: "health-record", href: "/health-record", icon: Calendar },
 ] as const
 
 export function BottomNavigation({
