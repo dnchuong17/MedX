@@ -34,42 +34,9 @@ const safeLocalStorage = {
 }
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-  withCredentials: true, // Enable sending cookies in cross-origin requests
+  baseURL: "http://localhost:3000",
+  headers: { "Content-Type": "application/json" },
 })
-
-// Add request interceptor for error handling
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = safeLocalStorage.getItem("accessToken")
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
-
-// Add response interceptor for error handling
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      safeLocalStorage.removeItem("accessToken")
-      // Optionally redirect to login page
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth/login"
-      }
-    }
-    return Promise.reject(error)
-  }
-)
 
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -211,35 +178,50 @@ export async function verifyOtp(
 
 export async function loginUser(data: LoginInput): Promise<AuthResponse> {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/login", data)
+    const response = await apiClient.post<string | AuthResponse>(
+      "/auth/login",
+      data
+    )
 
     if (!response.data) {
       throw new Error("Empty response received from server")
     }
 
-    const token =
-      typeof response.data === "string" ? response.data : response.data.token
-    if (!token) {
-      throw new Error("No token received from server")
+    let token: string
+
+    if (typeof response.data === "string") {
+      token = response.data
+      console.log("Received direct token string")
+    } else if (response.data.token) {
+      token = response.data.token
+      console.log("Received token from object property")
+    } else {
+      throw new Error(
+        `Token not found in response. Response data: ${JSON.stringify(
+          response.data
+        )}`
+      )
     }
 
     safeLocalStorage.setItem("accessToken", token)
     setAuthToken(token)
 
-    return { token }
+    console.log("Login token:", token)
+    console.log(
+      "Token in localStorage:",
+      safeLocalStorage.getItem("accessToken")
+    )
+
+    return typeof response.data === "string" ? { token } : response.data
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      if (error.response?.status === 401) {
-        throw new Error("Invalid email or password")
-      }
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message)
-      }
-      if (error.message) {
-        throw new Error(error.message)
-      }
+    console.error("Error logging in:", error)
+
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("API response error:", error.response.data)
+      throw new Error(error.response.data?.message || "Authentication failed")
     }
-    throw new Error("An error occurred during login. Please try again.")
+
+    throw error
   }
 }
 

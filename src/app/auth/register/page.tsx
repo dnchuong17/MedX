@@ -59,21 +59,13 @@ const RegisterPageContent = () => {
     // No wallet tab logic needed
   }, [wallet.connected, wallet.publicKey, router])
 
-  const handleRegister = async (e: React.FormEvent) => {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setFeedback(null)
     if (registerMethod === "Phone") {
-      try {
-        await registerByPhone({ name: fullName, phone: phoneNumber, password })
-        setStep("setEmail")
-      } catch (err: any) {
-        setFeedback({
-          type: "error",
-          message: "Register error: " + (err.message || JSON.stringify(err)),
-        })
-        setIsLoading(false)
-      }
+      setIsLoading(false)
+      setStep("setPassword")
     } else {
       // Email registration flow
       try {
@@ -86,9 +78,11 @@ const RegisterPageContent = () => {
           setIsLoading(false)
           return
         }
-        await registerByEmail({ email, password, name: fullName })
+        await registerByEmail({ email, password })
         setFeedback({ type: "success", message: "Registration successful!" })
-        router.push(`/auth/verification?email=${encodeURIComponent(email)}`)
+        setTimeout(() => {
+          router.push("/profile/set-up")
+        }, 1200)
       } catch (err: any) {
         setFeedback({
           type: "error",
@@ -100,7 +94,7 @@ const RegisterPageContent = () => {
     }
   }
 
-  const handlePhonePassword = async (e: React.FormEvent) => {
+  async function handlePhonePassword(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setFeedback(null)
@@ -117,13 +111,13 @@ const RegisterPageContent = () => {
     }
   }
 
-  const handleSetEmail = async (e: React.FormEvent) => {
+  async function handleSetEmail(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setFeedback(null)
     try {
       await setEmailAfterPhone(phoneNumber, email)
-      router.push(`/auth/verification?email=${encodeURIComponent(email)}`)
+      setStep("verifyOtp")
     } catch (err: any) {
       setFeedback({
         type: "error",
@@ -134,14 +128,14 @@ const RegisterPageContent = () => {
     }
   }
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setFeedback(null)
     try {
       await verifyOtp({ email, otp })
       setFeedback({ type: "success", message: "Verification successful!" })
-      router.push("/profile/set-up")
+      setTimeout(() => router.push("/home"), 1200)
     } catch (err: any) {
       setFeedback({
         type: "error",
@@ -154,7 +148,7 @@ const RegisterPageContent = () => {
 
   function handleWalletContinue() {
     if (wallet.connected) {
-      router.push("/profile/set-up")
+      router.push("/home")
     }
   }
 
