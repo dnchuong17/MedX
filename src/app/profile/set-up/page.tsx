@@ -15,15 +15,17 @@ import {
   setAuthToken,
 } from "../../../utils/api"
 import { useRouter } from "next/navigation"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { setProfileData, setUserId } from "@/store/slices/profileSlice"
+import type { RootState } from "@/store"
 
 export default function HealthProfileSetup() {
   const router = useRouter()
   const dispatch = useDispatch()
+  const userId = useSelector((state: RootState) => state.profile.userId)
 
   const [currentStep, setCurrentStep] = useState(0)
-  const [profileData, setProfileData] = useState<{
+  const [profileData, setLocalProfileData] = useState<{
     age: number | null
     gender: string
     height: number | null
@@ -35,8 +37,7 @@ export default function HealthProfileSetup() {
     weight: null,
   })
 
-  const [userId, setUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true) // Start with loading true
+  const [loading, setLoading] = useState(true)
   const [updateSuccess, setUpdateSuccess] = useState(false)
   const [error, setError] = useState("")
 
@@ -100,7 +101,6 @@ export default function HealthProfileSetup() {
         if (!userData?.id) throw new Error("Invalid user data")
 
         const userId = userData.id.toString()
-        setUserId(userId)
         dispatch(setUserId(userId))
 
         const profileData = {
@@ -110,7 +110,7 @@ export default function HealthProfileSetup() {
           weight: userData.weight ?? null,
         }
 
-        setProfileData(profileData)
+        setLocalProfileData(profileData)
         dispatch(setProfileData(profileData))
 
         if (
@@ -123,8 +123,8 @@ export default function HealthProfileSetup() {
         } else {
           setLoading(false)
         }
-      } catch (err) {
-        console.error(err)
+      } catch (err: unknown) {
+        console.error("Failed to load profile:", err)
         setError("Unable to load profile. Please login again.")
         setLoading(false)
       }
@@ -136,7 +136,7 @@ export default function HealthProfileSetup() {
   const handleInputChange = (value: string) => {
     const key = currentStepData.id
     const isNumberField = ["age", "height", "weight"].includes(key)
-    setProfileData((prev) => ({
+    setLocalProfileData((prev) => ({
       ...prev,
       [key]: isNumberField ? (value === "" ? null : Number(value)) : value,
     }))
@@ -153,30 +153,34 @@ export default function HealthProfileSetup() {
       console.log("Updating user profile with data:", profileData)
       console.log("User ID:", userId)
 
-      const result = await updateUserProfile(userId, profileData)
+      const result = await updateUserProfile(userId, {
+        age: profileData.age === null ? undefined : profileData.age,
+        gender: profileData.gender === "" ? undefined : profileData.gender,
+        height: profileData.height === null ? undefined : profileData.height,
+        weight: profileData.weight === null ? undefined : profileData.weight,
+      })
       console.log("Profile update result:", result)
 
-      dispatch(
-        setProfileData({
-          ...profileData,
-          isProfileComplete: true,
-        })
-      )
+      dispatch(setProfileData(profileData))
 
       setUpdateSuccess(true)
       setLoading(false)
       return true
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to update profile:", err)
 
-      if (err?.response?.status === 401) {
+      if (
+        (err instanceof Error && err.message.includes("session")) ||
+        (err instanceof Error && err.message.includes("token")) ||
+        (err instanceof Error && err.message.includes("log in"))
+      ) {
         setError("Your session has expired. Please log in again.")
         localStorage.removeItem("accessToken")
-      } else if (err?.response?.status === 400) {
-        setError(
-          err?.response?.data?.message ||
-            "Invalid profile data. Please check your inputs."
-        )
+      } else if (
+        err instanceof Error &&
+        err.message.includes("Invalid profile data")
+      ) {
+        setError(err.message)
       } else {
         setError("Failed to save your profile. Please try again.")
       }
@@ -359,7 +363,7 @@ export default function HealthProfileSetup() {
               </div>
             ) : (
               <div className="space-y-3">
-                {currentStepData.options.map((option) => (
+                {currentStepData.options?.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => handleInputChange(option.value)}

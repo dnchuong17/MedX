@@ -78,7 +78,7 @@ const RegisterPageContent = () => {
           setIsLoading(false)
           return
         }
-        await registerByEmail({ email, password })
+        await registerByEmail({ email, password, name: fullName })
         setFeedback({ type: "success", message: "Registration successful!" })
         setTimeout(() => {
           router.push("/profile/set-up")
