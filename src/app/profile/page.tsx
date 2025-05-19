@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import BottomNavigation from "@/components/navbar"
@@ -18,6 +18,8 @@ import {
   FaCamera,
   FaBell,
 } from "react-icons/fa"
+import { getCurrentUser } from "@/utils/api"
+import type { User } from "@/utils/interface"
 
 interface MenuItemProps {
   icon: React.ReactNode
@@ -46,6 +48,58 @@ const MenuItem = ({ icon, label, onClick }: MenuItemProps) => {
 
 export default function ProfilePage() {
   const router = useRouter()
+
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const userData = await getCurrentUser()
+        setUser(userData)
+      } catch (err: unknown) {
+        function isErrorWithMessage(e: unknown): e is { message: string } {
+          return (
+            typeof e === "object" &&
+            e !== null &&
+            "message" in e &&
+            typeof (e as { message: unknown }).message === "string"
+          )
+        }
+        let message = "Failed to load user info"
+        if (isErrorWithMessage(err)) {
+          message = err.message
+        }
+        setError(message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <span className="text-lg text-gray-500">Loading profile...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <span className="text-lg text-red-500">{error}</span>
+        <button
+          onClick={() => router.push("/auth/login")}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg"
+        >
+          Go to Login
+        </button>
+      </div>
+    )
+  }
 
   const handleMenuItemClick = (label: string) => {
     switch (label) {
@@ -142,7 +196,7 @@ export default function ProfilePage() {
             transition={{ delay: 0.3 }}
             className="text-2xl font-bold mt-6 text-gray-800"
           >
-            John Doe
+            {user?.name || "No Name"}
           </motion.h3>
           <motion.p
             initial={{ opacity: 0 }}
@@ -150,7 +204,7 @@ export default function ProfilePage() {
             transition={{ delay: 0.4 }}
             className="text-gray-500 mt-1"
           >
-            john.doe@gmail.com
+            {user?.email || "No Email"}
           </motion.p>
         </div>
 

@@ -16,6 +16,16 @@ import { useRouter } from "next/navigation"
 import { FaUserCircle } from "react-icons/fa"
 import { motion } from "framer-motion"
 import BottomNavigation from "@/components/navbar"
+import { useSelector } from "react-redux"
+import { RootState } from "@/store/store"
+import {
+  calculateBMI,
+  getBMIStatus,
+  calculateBMR,
+  calculateDailyCalories,
+  calculateIdealWeight,
+} from "@/utils/healthMetrics"
+
 interface HealthMetric {
   title: string
   value: string | number
@@ -31,15 +41,34 @@ interface Challenge {
 }
 
 const HomePage = () => {
+  const profile = useSelector((state: RootState) => state.profile)
+
+  const bmi = calculateBMI(profile.height, profile.weight)
+  const bmr = calculateBMR(profile)
+  const dailyCalories = calculateDailyCalories(bmr)
+  const idealWeight = calculateIdealWeight(profile.height, profile.gender)
+
   const healthMetrics: HealthMetric[] = [
-    { title: "BMI Index", value: "23.5", description: "Normal" },
-    { title: "Heart Rate", value: "72", description: "Average BPM today" },
     {
-      title: "Activity Streak",
-      value: "7",
-      description: "Consecutive active days",
+      title: "BMI Index",
+      value: bmi !== null ? bmi : "--",
+      description: getBMIStatus(bmi),
     },
-    { title: "Weight Loss", value: "3.2/5", description: "KG lost/goal" },
+    {
+      title: "BMR",
+      value: bmr !== null ? bmr : "--",
+      description: "Basal Metabolic Rate (kcal/day)",
+    },
+    {
+      title: "Ideal Weight",
+      value: idealWeight !== null ? idealWeight : "--",
+      description: "Based on height & gender (kg)",
+    },
+    {
+      title: "Daily Calories",
+      value: dailyCalories !== null ? dailyCalories : "--",
+      description: "Recommended intake (kcal)",
+    },
   ]
 
   const challenges: Challenge[] = [
@@ -193,7 +222,7 @@ const HomePage = () => {
           >
             Current Challenges
           </motion.h2>
-          <div className="space-y-3 shadow-md">
+          <div className="space-y-3">
             {challenges.map((challenge, idx) => (
               <motion.div
                 key={challenge.id}
@@ -204,9 +233,9 @@ const HomePage = () => {
                   type: "spring",
                   stiffness: 100,
                 }}
-                className="bg-gray-100 rounded-lg p-3 hover:shadow-md transition-shadow"
+                className="bg-gray-100 rounded-lg p-3 transition-shadow  shadow-md"
               >
-                <div className="flex space-x-3 items-center mb-2">
+                <div className="flex space-x-3 items-center mb-2 ">
                   {challenge.icon}
                   <div>
                     <h3 className="text-sm font-medium">{challenge.title}</h3>
@@ -268,7 +297,7 @@ const HomePage = () => {
         </div>
       </main>
 
-      <BottomNavigation activeItem="home" />
+      <BottomNavigation />
     </div>
   )
 }
