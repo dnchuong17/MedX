@@ -9,9 +9,9 @@ import { setActiveTab, NavigationTab } from "@/store/features/navigationSlice"
 
 const navItems = [
   { key: "home" as NavigationTab, href: "/", icon: Home },
-  { key: "profile" as NavigationTab, href: "/profile", icon: User },
   { key: "chat" as NavigationTab, href: "/chat", icon: MessageCircle },
   { key: "booking" as NavigationTab, href: "/booking", icon: Calendar },
+  { key: "profile" as NavigationTab, href: "/profile", icon: User },
 ] as const
 
 export function BottomNavigation() {
