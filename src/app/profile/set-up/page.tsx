@@ -95,9 +95,8 @@ export default function HealthProfileSetup() {
                     weight: userData.weight ?? null,
                 }));
 
-                // Nếu đã đủ dữ liệu thì chuyển thẳng tới Dashboard
                 if (userData.age && userData.gender && userData.height && userData.weight) {
-                    router.push('/dashboard');
+                    router.push('/home');
                 } else {
                     setLoading(false);
                 }
