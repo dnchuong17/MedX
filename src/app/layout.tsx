@@ -1,17 +1,7 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { SolanaWalletProvider } from "@/components/providers/WalletProvider"
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-})
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-})
+import { ReduxProvider } from "@/providers/ReduxProvider"
 
 export const metadata: Metadata = {
   title: "MedX",
@@ -30,10 +20,12 @@ export default function RootLayout({
     >
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         <div className="w-full min-h-screen max-w-screen-md mx-auto flex flex-col justify-center">
-          <SolanaWalletProvider>{children}</SolanaWalletProvider>
+          <ReduxProvider>
+            <SolanaWalletProvider>{children}</SolanaWalletProvider>
+          </ReduxProvider>
         </div>
       </body>
     </html>
