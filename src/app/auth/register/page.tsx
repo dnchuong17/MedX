@@ -8,7 +8,12 @@ import Link from "next/link"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
 import "@solana/wallet-adapter-react-ui/styles.css"
-import { registerByPhone, setEmailAfterPhone, verifyOtp } from "@/utils/api"
+import {
+  registerByPhone,
+  setEmailAfterPhone,
+  verifyOtp,
+  registerByEmail,
+} from "@/utils/api"
 import { AnimatePresence, motion } from "framer-motion"
 
 type RegisterMethod = "Email" | "Phone"
@@ -54,12 +59,38 @@ const RegisterPageContent = () => {
     // No wallet tab logic needed
   }, [wallet.connected, wallet.publicKey, router])
 
-  function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
+    setIsLoading(true)
+    setFeedback(null)
     if (registerMethod === "Phone") {
+      setIsLoading(false)
       setStep("setPassword")
     } else {
-      setStep("setPassword")
+      // Email registration flow
+      try {
+        // Validate password and confirmPassword
+        if (!password || password !== confirmPassword) {
+          setFeedback({
+            type: "error",
+            message: "Passwords do not match",
+          })
+          setIsLoading(false)
+          return
+        }
+        await registerByEmail({ email, password, name: fullName })
+        setFeedback({ type: "success", message: "Registration successful!" })
+        setTimeout(() => {
+          router.push("/profile/set-up")
+        }, 1200)
+      } catch (err: any) {
+        setFeedback({
+          type: "error",
+          message: "Register error: " + (err.message || JSON.stringify(err)),
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -227,49 +258,109 @@ const RegisterPageContent = () => {
                     className="space-y-4"
                   >
                     {registerMethod === "Email" && (
-                      <div className="space-y-2">
-                        <label className="text-gray-800 font-medium">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                          placeholder="example@example.com"
-                          required
-                        />
-                      </div>
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-gray-800 font-medium">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                            placeholder="example@example.com"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-gray-800 font-medium">
+                            Password
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                              placeholder="Enter password"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-3 text-gray-500 hover:text-indigo-600"
+                              tabIndex={-1}
+                            >
+                              {showPassword ? (
+                                <EyeOff size={20} />
+                              ) : (
+                                <Eye size={20} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-gray-800 font-medium">
+                            Confirm Password
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showConfirmPassword ? "text" : "password"}
+                              value={confirmPassword}
+                              onChange={(e) =>
+                                setConfirmPassword(e.target.value)
+                              }
+                              className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                              placeholder="Confirm password"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
+                              className="absolute right-3 top-3 text-gray-500 hover:text-indigo-600"
+                              tabIndex={-1}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff size={20} />
+                              ) : (
+                                <Eye size={20} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </>
                     )}
                     {registerMethod === "Phone" && (
-                      <div className="space-y-2">
-                        <label className="text-gray-800 font-medium">
-                          Full name
-                        </label>
-                        <input
-                          type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                          placeholder="Enter your full name"
-                          required
-                        />
-                      </div>
-                    )}
-                    {registerMethod === "Phone" && (
-                      <div className="space-y-2">
-                        <label className="text-gray-800 font-medium">
-                          Phone Number
-                        </label>
-                        <input
-                          type="tel"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                          placeholder="+84 909 090 909"
-                          required
-                        />
-                      </div>
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-gray-800 font-medium">
+                            Full name
+                          </label>
+                          <input
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                            placeholder="Enter your full name"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-gray-800 font-medium">
+                            Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                            placeholder="+84 909 090 909"
+                            required
+                          />
+                        </div>
+                      </>
                     )}
                   </motion.div>
                 </AnimatePresence>

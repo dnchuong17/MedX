@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
-// import MedicalFolderIcon from '../../components/medical-folder-icon';
 
 export default function SplashScreen() {
   const router = useRouter()
@@ -19,7 +18,7 @@ export default function SplashScreen() {
           setIsLoading(false)
           setTimeout(() => {
             router.push("/welcome")
-          }, 500)
+          }, 300)
           return 100
         }
         return prev + 10
@@ -44,7 +43,31 @@ export default function SplashScreen() {
   }
 
   return (
-    <main className="min-h-dvh w-screen flex items-center justify-center bg-gradient-to-b from-indigo-100 via-blue-200 to-indigo-200">
+    <main className="min-h-dvh w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <style
+        jsx
+        global
+      >{`
+        @keyframes gradient {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradient 4s ease infinite;
+        }
+        .animate-gradient-slow {
+          background-size: 200% 200%;
+          animation: gradient 6s ease infinite;
+        }
+      `}</style>
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-col items-center justify-center">
           <motion.div
@@ -62,13 +85,13 @@ export default function SplashScreen() {
                 priority
               />
               <motion.h1
-                className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#3E3187] to-[#443CC6] drop-shadow-lg"
+                className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg animate-gradient-slow"
                 variants={textVariants}
               >
                 MedX
               </motion.h1>
               <motion.p
-                className="drop-shadow-lg mt-4 text-center text-xl font-semibold"
+                className="text-blue-900 mt-4 text-center text-xl font-semibold"
                 variants={textVariants}
                 transition={{ delay: 0.5 }}
               >
@@ -79,14 +102,14 @@ export default function SplashScreen() {
           <AnimatePresence>
             {isLoading && (
               <motion.div
-                className="mt-12 w-64 bg-blue-100 rounded-full h-2 overflow-hidden"
+                className="mt-12 w-64 bg-white/50 backdrop-blur-sm rounded-full h-2 overflow-hidden"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
                 <motion.div
-                  className="bg-indigo-600 h-2 rounded-full"
+                  className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 h-2 rounded-full animate-gradient"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
