@@ -60,7 +60,6 @@ export default function HealthProfileSetup() {
       options: [
         { value: "male", label: "Male", emoji: "👨" },
         { value: "female", label: "Female", emoji: "👩" },
-        { value: "other", label: "Other", emoji: "🌟" },
       ],
     },
     {

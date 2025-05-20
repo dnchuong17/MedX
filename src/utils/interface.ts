@@ -29,13 +29,13 @@
   export interface User {
     id: number;
     email: string;
-    password?: string; // optional nếu user dùng OAuth/wallet
+    password?: string;
     name?: string;
     phone?: string;
     is_verified: boolean;
     otp?: string;
     age?: number;
-    gender?: 'male' | 'female' | 'other' | string; // có thể thay bằng enum
+    gender?: 'male' | 'female' | 'other' | string;
     weight?: number;
     height?: number;
     wallet_address?: string;
@@ -70,7 +70,6 @@
     signature: string
   }
 
-  // interfaces.ts - Add these types to your existing interface file
 
   export interface UpdateUserInput {
     age?: string | number;
