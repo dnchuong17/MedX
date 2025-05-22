@@ -299,7 +299,7 @@ import AddButton from "@/components/health-record/add.button";export default fun
                             ? `Share ${selectedRecords.length} Record${selectedRecords.length > 1 ? "s" : ""}`
                             : "Select Records to Share"}
                     </button>
-                    <AddButton onClick={() => alert("Add new record")}/>
+                    <AddButton />
 
                 </div>
 
