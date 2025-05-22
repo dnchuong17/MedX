@@ -366,14 +366,18 @@ export async function getUserByEmail(email: string): Promise<User> {
 }
 
 export interface HealthRecordInput {
-file?: File;
-publicKey?: string;
-date: string;
-doctor: string;
-category: string;
-facility: string;
-notes: string;
-userId: string;
+  file?: File;
+  publicKey?: string;
+  date: string;
+  doctor: string;
+  category: string;
+  facility: string;
+  notes: string;
+  userId: string;
+  // Add signature fields
+  recordSignature?: string;
+  signedMessage?: string;
+  authSignature?: string;
 }
 
 export interface HealthRecordResponse {
@@ -385,7 +389,6 @@ export interface HealthRecordResponse {
   notes: string;
   transaction: string;
 }
-
 /**
  * Uploads a health record with optional image attachment
  */

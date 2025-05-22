@@ -22,6 +22,7 @@ const HealthRecordForm = () => {
     const [apiResponse, setApiResponse] = useState<HealthRecordResponse | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [signature, setSignature] = useState<string | null>(null);
+    const [transactionId, setTransactionId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0], // Current date
@@ -31,7 +32,6 @@ const HealthRecordForm = () => {
         notes: '',
     });
 
-    // Function to authenticate user by signing a message
     const authenticateUser = async () => {
         if (!connected || !publicKey || !signMessage) {
             setErrorMessage("Wallet not connected or doesn't support message signing.");
@@ -46,7 +46,6 @@ const HealthRecordForm = () => {
             console.log("Wallet Address:", publicKey.toBase58());
             console.log("Wallet Connected:", connected);
 
-            // Create a message to sign with timestamp for uniqueness
             const timestamp = Date.now();
             const message = `Authenticate health record access\nWallet: ${publicKey.toBase58()}\nTimestamp: ${timestamp}`;
             console.log("Authentication Message:", message);
@@ -92,14 +91,12 @@ const HealthRecordForm = () => {
         }
     };
 
-    // Function to sign health record data
     const signHealthRecord = async (recordData: any) => {
         if (!connected || !publicKey || !signMessage) {
             throw new Error("Wallet not connected or doesn't support message signing.");
         }
 
         try {
-            // Create a deterministic string from the record data
             const dataString = JSON.stringify({
                 date: recordData.date,
                 doctor: recordData.doctor,
@@ -150,6 +147,7 @@ const HealthRecordForm = () => {
         setErrorMessage(null);
         setSuccessMessage(null);
         setApiResponse(null);
+        setTransactionId(null);
 
         if (!connected || !publicKey) {
             setErrorMessage("Please connect your wallet first.");
@@ -216,27 +214,26 @@ const HealthRecordForm = () => {
             console.log("Full Response Object:", result);
             console.log("Response Keys:", Object.keys(result || {}));
 
-            // // Log specific fields
-            // if (result) {
-            //     console.log("- Record ID:", result?.recordId || 'Not provided');
-            //     console.log("- Message:", result?.message || 'Not provided');
-            //     console.log("- Transaction Hash:", result?.txHash || 'Not provided');
-            //     console.log("- Status:", result?.status || 'Not provided');
-            //     console.log("- Success:", result?.success || 'Not provided');
-            //     console.log("- Timestamp:", result?.timestamp || 'Not provided');
-            //     console.log("- User ID:", result?.userId || 'Not provided');
-            //     console.log("- Public Key:", result?.publicKey || 'Not provided');
-            //
-            //     // Log any additional fields
-            //     const knownFields = ['recordId', 'message', 'txHash', 'status', 'success', 'timestamp', 'userId', 'publicKey'];
-            //     const additionalFields = Object.keys(result).filter(key => !knownFields.includes(key));
-            //     if (additionalFields.length > 0) {
-            //         console.log("- Additional Fields:", additionalFields.reduce((obj, key) => {
-            //             obj[key] = result[key];
-            //             return obj;
-            //         }, {}));
-            //     }
-            // }
+            if (result?.transaction) {
+                setTransactionId(result.transaction);
+                console.log("🎉 SUCCESS: TRANSACTION ID FOUND!");
+                console.log("📝 TRANSACTION ID:", result.transaction);
+                console.log("🔗 Transaction Link: https://solscan.io/tx/" + result.transaction);
+            } else {
+                console.log("⚠️ WARNING: No transaction ID found in response");
+                console.log("Available response fields:", Object.keys(result || {}));
+            }
+
+            console.log("=== FULL RESPONSE BREAKDOWN ===");
+            if (result) {
+                console.log(`- url: ${result.url}`);
+                console.log(`- recordId: ${result.recordId}`);
+                console.log(`- doctor: ${result.doctor}`);
+                console.log(`- category: ${result.category}`);
+                console.log(`- facility: ${result.facility}`);
+                console.log(`- notes: ${result.notes}`);
+                console.log(`- transaction: ${result.transaction}`);
+            }
 
             console.log("=== RESPONSE PROCESSING COMPLETE ===");
 
@@ -277,10 +274,23 @@ const HealthRecordForm = () => {
                     const responseData = error.response.data;
                     console.log("Response Data Keys:", Object.keys(responseData));
 
-                    // Log each field in response data
-                    Object.keys(responseData).forEach(key => {
-                        console.log(`- ${key}:`, responseData[key]);
-                    });
+                    // Type-safe check for transaction ID in error response
+                    if (responseData && typeof responseData === 'object' && 'transaction' in responseData) {
+                        const errorTransactionId = (responseData as HealthRecordResponse).transaction;
+                        if (errorTransactionId) {
+                            console.log("🎉 TRANSACTION ID FOUND IN ERROR RESPONSE!");
+                            console.log("📝 TRANSACTION ID:", errorTransactionId);
+                            console.log("🔗 Transaction Link: https://solscan.io/tx/" + errorTransactionId);
+                            setTransactionId(errorTransactionId);
+                        }
+                    }
+
+                    // Log each field in response data safely
+                    if (typeof responseData === 'object' && responseData !== null) {
+                        Object.keys(responseData).forEach(key => {
+                            console.log(`- ${key}:`, (responseData as any)[key]);
+                        });
+                    }
                 }
 
                 if (error.response?.data?.recordId) {
@@ -305,7 +315,6 @@ const HealthRecordForm = () => {
             setIsLoading(false);
         }
     };
-
     return (
         <div className="min-h-screen bg-gray-800 flex justify-center">
             <div className="w-full max-w-md bg-white flex flex-col">
