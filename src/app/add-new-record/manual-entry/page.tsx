@@ -6,7 +6,8 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import BottomNavigation from "@/components/navbar";
-import { uploadHealthRecord, HealthRecordResponse, getCurrentUser } from '@/utils/api';
+import {uploadHealthRecord, HealthRecordResponse, getCurrentUser, HealthRecordInput} from '@/utils/api';
+import axios from "axios";
 
 const HealthRecordForm = () => {
     const { connected, publicKey } = useWallet();
@@ -184,15 +185,15 @@ const HealthRecordForm = () => {
                         </div>
                     )}
 
-                    {/* API Response (if available) */}
-                    {apiResponse && (
-                        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative mb-4">
-                            <h3 className="font-bold mb-2">API Response:</h3>
-                            <pre className="text-xs overflow-auto max-h-40 bg-blue-100 p-2 rounded">
-                                {JSON.stringify(apiResponse, null, 2)}
-                            </pre>
-                        </div>
-                    )}
+                    {/*/!* API Response (if available) *!/*/}
+                    {/*{apiResponse && (*/}
+                    {/*    <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded relative mb-4">*/}
+                    {/*        <h3 className="font-bold mb-2">API Response:</h3>*/}
+                    {/*        <pre className="text-xs overflow-auto max-h-40 bg-blue-100 p-2 rounded">*/}
+                    {/*            {JSON.stringify(apiResponse, null, 2)}*/}
+                    {/*        </pre>*/}
+                    {/*    </div>*/}
+                    {/*)}*/}
 
                     {/* Tabs */}
                     <div className="flex mb-4">
