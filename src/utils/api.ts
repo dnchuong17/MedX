@@ -416,7 +416,7 @@ export async function uploadHealthRecord(
     formData.append("notes", data.notes);
     formData.append("userId", data.userId);
     formData.append("publicKey", data.publicKey || "");
-    formData.append("encrypted_key", data.encryption_key || "");
+    formData.append("encryption_key", data.encryption_key || "");
 
     console.log("Sending FormData:");
     for (const [key, value] of formData.entries()) {
