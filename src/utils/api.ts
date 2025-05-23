@@ -457,3 +457,34 @@ export async function uploadHealthRecord(
     throw error;
   }
 }
+
+export async function confirmTransaction(recordId: string, transaction: string): Promise<void> {
+  try {
+    const token = safeLocalStorage.getItem("accessToken");
+    if (!token) throw new Error("No authentication token found");
+
+    setAuthToken(token);
+
+    const response = await apiClient.post(`/confirm-transaction/${recordId}`, {
+      transaction,
+    });
+
+    console.log("Transaction confirmed:", response.data);
+  } catch (error) {
+    console.error("Error confirming transaction:", error);
+
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("API Error Response:", error.response.data);
+
+      if (error.response.status === 401) {
+        safeLocalStorage.removeItem("accessToken");
+        setAuthToken(null);
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      throw new Error(error.response.data?.message || "Transaction confirmation failed");
+    }
+
+    throw error;
+  }
+}

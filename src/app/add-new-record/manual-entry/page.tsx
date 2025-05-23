@@ -18,6 +18,8 @@ import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { createHash } from "crypto";
 import sodium from 'libsodium-wrappers-sumo';
+import { useConnection } from "@solana/wallet-adapter-react";
+
 
 const HealthRecordForm = () => {
     const { connected, publicKey, signMessage } = useWallet();
@@ -33,6 +35,7 @@ const HealthRecordForm = () => {
     const [seed, setSeed] = useState<Uint8Array | null>(null);
     const [curvePublicKey, setCurvePublicKey] = useState<Uint8Array | null>(null);
     const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
+    const { connection } = useConnection();
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split("T")[0],
@@ -141,7 +144,31 @@ const HealthRecordForm = () => {
 
             const result = await uploadHealthRecord(healthRecordData);
             setApiResponse(result);
-            setSuccessMessage("Health record uploaded successfully!");
+            // 🧾 Gửi giao dịch Solana nếu có
+            if (result.transaction && result.recordId) {
+                const transactionBuffer = Buffer.from(result.transaction, 'base64');
+                const txSig = await connection.sendRawTransaction(transactionBuffer, {
+                    skipPreflight: false,
+                    preflightCommitment: "confirmed",
+                });
+
+                // ✅ Xác nhận giao dịch
+                const confirmation = await connection.confirmTransaction(txSig, "confirmed");
+
+                if (confirmation.value.err) {
+                    setErrorMessage("Transaction failed to confirm on Solana.");
+                    return;
+                }
+
+                setSuccessMessage("Health record uploaded and transaction confirmed!");
+            } else {
+                setErrorMessage("No transaction data received from server.");
+                return;
+            }
+
+
+            // setSuccessMessage("Health record uploaded successfully!");
+
 
             setFormData({
                 date: new Date().toISOString().split("T")[0],
@@ -277,22 +304,22 @@ const HealthRecordForm = () => {
                     {/*            <div className="mb-2">*/}
                     {/*                <strong>Record ID:</strong> {apiResponse.recordId || 'N/A'}*/}
                     {/*            </div>*/}
-                                {/*{apiResponse.message && (*/}
-                                {/*    <div className="mb-2">*/}
-                                {/*        <strong>Message:</strong> {apiResponse.message}*/}
-                                {/*    </div>*/}
-                                {/*)}*/}
-                                {/*{apiResponse.txHash && (*/}
-                                {/*    <div className="mb-2">*/}
-                                {/*        <strong>Transaction Hash:</strong>*/}
-                                {/*        <span className="font-mono block mt-1 break-all">{apiResponse.txHash}</span>*/}
-                                {/*    </div>*/}
-                                {/*)}*/}
-                                {/*{apiResponse.timestamp && (*/}
-                                {/*    <div className="mb-2">*/}
-                                {/*        <strong>Timestamp:</strong> {new Date(apiResponse.timestamp).toLocaleString()}*/}
-                                {/*    </div>*/}
-                                {/*)}*/}
+                    {/*{apiResponse.message && (*/}
+                    {/*    <div className="mb-2">*/}
+                    {/*        <strong>Message:</strong> {apiResponse.message}*/}
+                    {/*    </div>*/}
+                    {/*)}*/}
+                    {/*{apiResponse.txHash && (*/}
+                    {/*    <div className="mb-2">*/}
+                    {/*        <strong>Transaction Hash:</strong>*/}
+                    {/*        <span className="font-mono block mt-1 break-all">{apiResponse.txHash}</span>*/}
+                    {/*    </div>*/}
+                    {/*)}*/}
+                    {/*{apiResponse.timestamp && (*/}
+                    {/*    <div className="mb-2">*/}
+                    {/*        <strong>Timestamp:</strong> {new Date(apiResponse.timestamp).toLocaleString()}*/}
+                    {/*    </div>*/}
+                    {/*)}*/}
                     {/*            <details className="mt-3">*/}
                     {/*                <summary className="cursor-pointer font-medium text-green-700 hover:text-green-800">*/}
                     {/*                    View Full Response (JSON)*/}
