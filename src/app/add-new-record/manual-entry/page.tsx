@@ -11,7 +11,7 @@ import {
     uploadHealthRecord,
     HealthRecordResponse,
     getCurrentUser,
-    HealthRecordInput,
+    HealthRecordInput, confirmTransaction,
 } from "@/utils/api";
 import axios from "axios";
 import nacl from "tweetnacl";
@@ -144,21 +144,9 @@ const HealthRecordForm = () => {
 
             const result = await uploadHealthRecord(healthRecordData);
             setApiResponse(result);
-            // 🧾 Gửi giao dịch Solana nếu có
             if (result.transaction && result.recordId) {
-                const transactionBuffer = Buffer.from(result.transaction, 'base64');
-                const txSig = await connection.sendRawTransaction(transactionBuffer, {
-                    skipPreflight: false,
-                    preflightCommitment: "confirmed",
-                });
-
-                // ✅ Xác nhận giao dịch
-                const confirmation = await connection.confirmTransaction(txSig, "confirmed");
-
-                if (confirmation.value.err) {
-                    setErrorMessage("Transaction failed to confirm on Solana.");
-                    return;
-                }
+                    const result2 = await confirmTransaction(result.recordId, result.transaction);
+                    console.log("Result2: ", result2);
 
                 setSuccessMessage("Health record uploaded and transaction confirmed!");
             } else {

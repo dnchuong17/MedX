@@ -375,10 +375,9 @@ export interface HealthRecordInput {
   notes: string;
   userId: string;
   encryption_key: string;
-  // Add signature fields
-  recordSignature?: string;
-  signedMessage?: string;
-  authSignature?: string;
+  // // Add signature fields
+  // signedMessage?: string;
+  // authSignature?: string;
 }
 
 export interface HealthRecordResponse {
@@ -458,17 +457,16 @@ export async function uploadHealthRecord(
   }
 }
 
-export async function confirmTransaction(recordId: string, transaction: string): Promise<void> {
+export async function confirmTransaction(recordId: string, txid: string): Promise<void> {
   try {
     const token = safeLocalStorage.getItem("accessToken");
+    console.log("Txid:", txid);
     if (!token) throw new Error("No authentication token found");
-
     setAuthToken(token);
 
-    const response = await apiClient.post(`/confirm-transaction/${recordId}`, {
-      transaction,
-    });
-
+    const payload = JSON.stringify({txid});
+    const response = await apiClient.post(`/record/confirm-transaction/${recordId}`,
+        payload);
     console.log("Transaction confirmed:", response.data);
   } catch (error) {
     console.error("Error confirming transaction:", error);
