@@ -374,6 +374,7 @@ export interface HealthRecordInput {
   facility: string;
   notes: string;
   userId: string;
+  encryption_key: string;
   // Add signature fields
   recordSignature?: string;
   signedMessage?: string;
@@ -414,7 +415,8 @@ export async function uploadHealthRecord(
     formData.append("facility", data.facility);
     formData.append("notes", data.notes);
     formData.append("userId", data.userId);
-    formData.append("publicKey", data.publicKey || ""); // Add publicKey
+    formData.append("publicKey", data.publicKey || "");
+    formData.append("encrypted_key", data.encryption_key || "");
 
     console.log("Sending FormData:");
     for (const [key, value] of formData.entries()) {

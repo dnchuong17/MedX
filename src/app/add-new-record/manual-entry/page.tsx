@@ -1,35 +1,45 @@
-"use client"
-import React, { useState } from 'react';
-import { FaPaperclip } from 'react-icons/fa';
-import { ArrowLeft, Search, Settings } from 'lucide-react';
+"use client";
+
+import React, { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { FaPaperclip } from "react-icons/fa";
+import { ArrowLeft, Search, Settings } from "lucide-react";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import BottomNavigation from "@/components/navbar";
-import {uploadHealthRecord, HealthRecordResponse, getCurrentUser, HealthRecordInput} from '@/utils/api';
+import {
+    uploadHealthRecord,
+    HealthRecordResponse,
+    getCurrentUser,
+    HealthRecordInput,
+} from "@/utils/api";
 import axios from "axios";
-import { sign } from 'tweetnacl';
-import bs58 from 'bs58';
+import nacl from "tweetnacl";
+import bs58 from "bs58";
+import { createHash } from "crypto";
+import sodium from 'libsodium-wrappers-sumo';
 
 const HealthRecordForm = () => {
     const { connected, publicKey, signMessage } = useWallet();
-    const [entryMode, setEntryMode] = useState<'upload' | 'manual'>('upload');
+    const [entryMode, setEntryMode] = useState<"upload" | "manual">("upload");
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [apiResponse, setApiResponse] = useState<HealthRecordResponse | null>(null);
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [signature, setSignature] = useState<string | null>(null);
-    const [transactionId, setTransactionId] = useState<string | null>(null);
+    const [seed, setSeed] = useState<Uint8Array | null>(null);
+    const [curvePublicKey, setCurvePublicKey] = useState<Uint8Array | null>(null);
+    const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().split('T')[0], // Current date
-        doctorFacility: '',
-        recordType: '',
-        facility: '',
-        notes: '',
+        date: new Date().toISOString().split("T")[0],
+        doctorFacility: "",
+        recordType: "",
+        facility: "",
+        notes: "",
     });
 
     const authenticateUser = async () => {
@@ -40,84 +50,39 @@ const HealthRecordForm = () => {
 
         try {
             setIsLoading(true);
-            setErrorMessage(null);
-
-            console.log("=== STARTING AUTHENTICATION ===");
-            console.log("Wallet Address:", publicKey.toBase58());
-            console.log("Wallet Connected:", connected);
-
             const timestamp = Date.now();
-            const message = `Authenticate health record access\nWallet: ${publicKey.toBase58()}\nTimestamp: ${timestamp}`;
-            console.log("Authentication Message:", message);
-
+            const message = `Authenticate health record access`;
             const messageBytes = new TextEncoder().encode(message);
-            console.log("Message Bytes Length:", messageBytes.length);
-
-            // Sign the message
-            console.log("Requesting signature from wallet...");
             const messageSignature = await signMessage(messageBytes);
-            console.log("Raw Signature Length:", messageSignature.length);
-
             const signatureBase58 = bs58.encode(messageSignature);
-            console.log("Base58 Signature:", signatureBase58);
 
-            // Verify the signature (optional client-side verification)
-            console.log("Verifying signature...");
-            const isValid = sign.detached.verify(
+            const isValid = nacl.sign.detached.verify(
                 messageBytes,
                 messageSignature,
                 publicKey.toBytes()
             );
-            console.log("Signature Valid:", isValid);
 
             if (isValid) {
+                await sodium.ready;
+                const derivedSeed = createHash("sha256").update(messageSignature).digest();
+                const keypair = nacl.sign.keyPair.fromSeed(new Uint8Array(derivedSeed));
+                const curvePubKey = sodium.crypto_sign_ed25519_pk_to_curve25519(keypair.publicKey);
+                const encryptionKeyBase58 = bs58.encode(keypair.publicKey);
+
+                setSeed(new Uint8Array(derivedSeed));
+                setCurvePublicKey(curvePubKey);
+                setEncryptionKey(encryptionKeyBase58);
                 setSignature(signatureBase58);
                 setIsAuthenticated(true);
-                setSuccessMessage("Authentication successful! You can now submit health records.");
-                console.log("=== AUTHENTICATION SUCCESS ===");
+                setSuccessMessage("Authentication successful!");
             } else {
                 setErrorMessage("Signature verification failed.");
-                console.log("=== AUTHENTICATION FAILED ===");
             }
-        } catch (error) {
-            console.log("=== AUTHENTICATION ERROR ===");
-            console.log("Error Type:", error?.constructor?.name);
-            console.log("Error Message:", error instanceof Error ? error.message : "Unknown error");
-            console.log("Full Error:", error);
+        } catch (err) {
+            console.error("Authentication error:", err);
             setErrorMessage("Failed to authenticate. Please try again.");
         } finally {
             setIsLoading(false);
-            console.log("=== AUTHENTICATION PROCESS COMPLETE ===");
-        }
-    };
-
-    const signHealthRecord = async (recordData: any) => {
-        if (!connected || !publicKey || !signMessage) {
-            throw new Error("Wallet not connected or doesn't support message signing.");
-        }
-
-        try {
-            const dataString = JSON.stringify({
-                date: recordData.date,
-                doctor: recordData.doctor,
-                category: recordData.category,
-                facility: recordData.facility,
-                notes: recordData.notes,
-                timestamp: Date.now()
-            });
-
-            const messageBytes = new TextEncoder().encode(dataString);
-            const messageSignature = await signMessage(messageBytes);
-            const signatureBase58 = bs58.encode(messageSignature);
-
-            return {
-                signature: signatureBase58,
-                message: dataString,
-                publicKey: publicKey.toBase58()
-            };
-        } catch (error) {
-            console.error("Error signing health record:", error);
-            throw error;
         }
     };
 
@@ -126,19 +91,16 @@ const HealthRecordForm = () => {
         if (file) {
             setSelectedFile(file);
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setSelectedImage(reader.result as string);
-            };
+            reader.onloadend = () => setSelectedImage(reader.result as string);
             reader.readAsDataURL(file);
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const handleInputChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         const { name, value } = e.target;
-        setFormData({
-            ...formData,
-            [name]: value,
-        });
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -147,98 +109,39 @@ const HealthRecordForm = () => {
         setErrorMessage(null);
         setSuccessMessage(null);
         setApiResponse(null);
-        setTransactionId(null);
 
-        if (!connected || !publicKey) {
-            setErrorMessage("Please connect your wallet first.");
-            setIsLoading(false);
-            return;
-        }
-
-        if (!isAuthenticated) {
-            setErrorMessage("Please authenticate first by signing the authentication message.");
-            setIsLoading(false);
-            return;
-        }
-
-        if (!formData.doctorFacility || !formData.recordType || !formData.facility) {
-            setErrorMessage("Please fill in all required fields.");
+        if (!connected || !publicKey || !isAuthenticated || !seed || !curvePublicKey || !encryptionKey) {
+            setErrorMessage("Please connect and authenticate your wallet.");
             setIsLoading(false);
             return;
         }
 
         try {
-            const walletAddress = publicKey.toBase58();
-            const currentUser = await getCurrentUser();
+            let encryptedBlob: Blob | undefined = undefined;
 
-            if (!currentUser?.id) {
-                setErrorMessage("User session expired. Please login again.");
-                setIsLoading(false);
-                return;
+            if (selectedFile) {
+                const buffer = await selectedFile.arrayBuffer();
+                const encrypted = sodium.crypto_box_seal(new Uint8Array(buffer), curvePublicKey);
+                encryptedBlob = new Blob([encrypted], { type: "application/octet-stream" });
             }
 
-            // Sign the health record data
-            const recordSignature = await signHealthRecord({
-                date: formData.date,
-                doctor: formData.doctorFacility,
-                category: formData.recordType,
-                facility: formData.facility,
-                notes: formData.notes
-            });
+            const currentUser = await getCurrentUser();
 
             const healthRecordData: HealthRecordInput = {
-                file: selectedFile || undefined,
+                file: encryptedBlob ? new File([encryptedBlob], selectedFile?.name || 'encrypted.bin') : undefined,
                 date: formData.date,
                 doctor: formData.doctorFacility,
                 category: formData.recordType,
                 facility: formData.facility,
                 notes: formData.notes,
                 userId: currentUser.id.toString(),
-                publicKey: walletAddress,
-                // Add signature data
-                recordSignature: recordSignature.signature,
-                signedMessage: recordSignature.message,
-                authSignature: signature // Include authentication signature
+                publicKey: publicKey.toBase58(),
+                encryption_key: encryptionKey,
             };
 
-            console.log("=== SUBMITTING DATA TO BACKEND ===");
-            console.log("Health Record Data:", healthRecordData);
-            console.log("Record Signature:", recordSignature.signature);
-            console.log("Auth Signature:", signature);
-            console.log("Timestamp:", new Date().toISOString());
-
             const result = await uploadHealthRecord(healthRecordData);
-
-            console.log("=== BACKEND RESPONSE RECEIVED ===");
-            console.log("Response Type:", typeof result);
-            console.log("Full Response Object:", result);
-            console.log("Response Keys:", Object.keys(result || {}));
-
-            if (result?.transaction) {
-                setTransactionId(result.transaction);
-                console.log("🎉 SUCCESS: TRANSACTION ID FOUND!");
-                console.log("📝 TRANSACTION ID:", result.transaction);
-                console.log("🔗 Transaction Link: https://solscan.io/tx/" + result.transaction);
-            } else {
-                console.log("⚠️ WARNING: No transaction ID found in response");
-                console.log("Available response fields:", Object.keys(result || {}));
-            }
-
-            console.log("=== FULL RESPONSE BREAKDOWN ===");
-            if (result) {
-                console.log(`- url: ${result.url}`);
-                console.log(`- recordId: ${result.recordId}`);
-                console.log(`- doctor: ${result.doctor}`);
-                console.log(`- category: ${result.category}`);
-                console.log(`- facility: ${result.facility}`);
-                console.log(`- notes: ${result.notes}`);
-                console.log(`- transaction: ${result.transaction}`);
-            }
-
-            console.log("=== RESPONSE PROCESSING COMPLETE ===");
-
             setApiResponse(result);
-            setSuccessMessage("Health record uploaded and verified successfully!");
+            setSuccessMessage("Health record uploaded successfully!");
 
             setFormData({
                 date: new Date().toISOString().split("T")[0],
@@ -250,71 +153,16 @@ const HealthRecordForm = () => {
             setSelectedImage(null);
             setSelectedFile(null);
         } catch (error) {
-            console.log("=== ERROR OCCURRED ===");
-            console.log("Error Type:", error?.constructor?.name);
-            console.log("Error Message:", error instanceof Error ? error.message : "Unknown error");
-            console.log("Error Stack:", error instanceof Error ? error.stack : "No stack trace");
-            console.log("Full Error Object:", error);
-            console.log("Error Time:", new Date().toISOString());
-
             if (axios.isAxiosError(error)) {
-                console.log("=== AXIOS ERROR DETAILS ===");
-                console.log("- Request URL:", error.config?.url);
-                console.log("- Request Method:", error.config?.method?.toUpperCase());
-                console.log("- Request Headers:", error.config?.headers);
-                console.log("- Request Data:", error.config?.data);
-                console.log("- Status Code:", error.response?.status);
-                console.log("- Status Text:", error.response?.statusText);
-                console.log("- Response Headers:", error.response?.headers);
-                console.log("- Response Data:", error.response?.data);
-                console.log("- Response Data Type:", typeof error.response?.data);
-
-                if (error.response?.data) {
-                    console.log("=== RESPONSE DATA BREAKDOWN ===");
-                    const responseData = error.response.data;
-                    console.log("Response Data Keys:", Object.keys(responseData));
-
-                    // Type-safe check for transaction ID in error response
-                    if (responseData && typeof responseData === 'object' && 'transaction' in responseData) {
-                        const errorTransactionId = (responseData as HealthRecordResponse).transaction;
-                        if (errorTransactionId) {
-                            console.log("🎉 TRANSACTION ID FOUND IN ERROR RESPONSE!");
-                            console.log("📝 TRANSACTION ID:", errorTransactionId);
-                            console.log("🔗 Transaction Link: https://solscan.io/tx/" + errorTransactionId);
-                            setTransactionId(errorTransactionId);
-                        }
-                    }
-
-                    // Log each field in response data safely
-                    if (typeof responseData === 'object' && responseData !== null) {
-                        Object.keys(responseData).forEach(key => {
-                            console.log(`- ${key}:`, (responseData as any)[key]);
-                        });
-                    }
-                }
-
-                if (error.response?.data?.recordId) {
-                    console.log("=== FALLBACK SUCCESS RESPONSE ===");
-                    const fallbackData = error.response.data as HealthRecordResponse;
-                    console.log("Fallback Data:", fallbackData);
-                    console.log("Using fallback response as success");
-                    setApiResponse(fallbackData);
-                    setSuccessMessage("Health record uploaded successfully (despite error status)");
-                } else {
-                    console.log("=== NO FALLBACK DATA AVAILABLE ===");
-                    setErrorMessage(`Backend Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
-                }
+                setErrorMessage(error.response?.data?.message || "Upload failed");
             } else {
-                console.log("=== NON-AXIOS ERROR ===");
-                console.log("This is not an HTTP request error");
-                setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
+                setErrorMessage("Unknown error occurred.");
             }
-
-            console.log("=== ERROR HANDLING COMPLETE ===");
         } finally {
             setIsLoading(false);
         }
     };
+
     return (
         <div className="min-h-screen bg-gray-800 flex justify-center">
             <div className="w-full max-w-md bg-white flex flex-col">
