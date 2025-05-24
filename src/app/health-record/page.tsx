@@ -20,6 +20,7 @@ export interface UserRecord {
     facility: string;
     date: string | null;
     notes: string;
+    encryptedData: string;
 }
 
 
@@ -34,6 +35,7 @@ interface UIRecord {
     status: string;
     url?: string;
     notes?: string;
+    encryptedData?: string;
 }
 
 export default function HealthRecordsApp() {
@@ -58,7 +60,8 @@ export default function HealthRecordsApp() {
             location: record.facility || "Unknown",
             status: record.versionOf ? "Updated" : "Shared", // Use versionOf to determine status
             url: record.url,
-            notes: record.notes
+            notes: record.notes,
+            encryptedData: record.encryptedData,
         }));
     };
 
