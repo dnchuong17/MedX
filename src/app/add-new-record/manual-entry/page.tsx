@@ -42,7 +42,6 @@ const HealthRecordForm = () => {
     const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
     const { connection } = useConnection();
 
-    // Enhanced camera states
     const [showCamera, setShowCamera] = useState(false);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isInitializingCamera, setIsInitializingCamera] = useState(false);
