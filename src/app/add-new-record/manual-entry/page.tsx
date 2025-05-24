@@ -369,8 +369,7 @@ const HealthRecordForm = () => {
             setApiResponse(result);
 
             if (result.transaction && result.recordId) {
-                const result2 = await confirmTransaction(result.recordId, result.transaction);
-                console.log("Transaction confirmation result: ", result2);
+                await confirmTransaction(result.recordId, result.transaction);
                 setSuccessMessage("Health record uploaded and transaction confirmed!");
             } else {
                 setErrorMessage("No transaction data received from server.");
