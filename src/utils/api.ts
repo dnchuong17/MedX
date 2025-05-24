@@ -11,6 +11,9 @@ import {
   UpdateUserResponse,
   User,
   RegisterByPhoneInput,
+  Challenge,
+  ChallengeInput,
+  ChallengeCheckInput,
 } from "./interface"
 
 // Safe localStorage access utility
@@ -418,122 +421,130 @@ export async function getUserByWallet(wallet_address: string): Promise<User> {
 }
 
 export interface HealthRecordInput {
-  file?: File;
-  publicKey?: string;
-  date: string;
-  doctor: string;
-  category: string;
-  facility: string;
-  notes: string;
-  userId: string;
-  encryption_key: string;
+  file?: File
+  publicKey?: string
+  date: string
+  doctor: string
+  category: string
+  facility: string
+  notes: string
+  userId: string
+  encryption_key: string
   // // Add signature fields
   // signedMessage?: string;
   // authSignature?: string;
 }
 
 export interface HealthRecordResponse {
-  url: string;
-  recordId: string;
-  doctor: string;
-  category: string;
-  facility: string;
-  notes: string;
-  transaction: string;
+  url: string
+  recordId: string
+  doctor: string
+  category: string
+  facility: string
+  notes: string
+  transaction: string
 }
 
-
 export async function uploadHealthRecord(
-    data: HealthRecordInput
+  data: HealthRecordInput
 ): Promise<HealthRecordResponse> {
   try {
-    const token = safeLocalStorage.getItem("accessToken");
-    if (!token) throw new Error("No authentication token found");
+    const token = safeLocalStorage.getItem("accessToken")
+    if (!token) throw new Error("No authentication token found")
 
-    setAuthToken(token);
+    setAuthToken(token)
 
-    const formData = new FormData();
+    const formData = new FormData()
 
     if (data.file) {
-      formData.append("file", data.file);
+      formData.append("file", data.file)
     }
 
-    formData.append("date", data.date);
-    formData.append("doctor", data.doctor);
-    formData.append("category", data.category);
-    formData.append("facility", data.facility);
-    formData.append("notes", data.notes);
-    formData.append("userId", data.userId);
-    formData.append("publicKey", data.publicKey || "");
-    formData.append("encryption_key", data.encryption_key || "");
+    formData.append("date", data.date)
+    formData.append("doctor", data.doctor)
+    formData.append("category", data.category)
+    formData.append("facility", data.facility)
+    formData.append("notes", data.notes)
+    formData.append("userId", data.userId)
+    formData.append("publicKey", data.publicKey || "")
+    formData.append("encryption_key", data.encryption_key || "")
 
-    console.log("Sending FormData:");
+    console.log("Sending FormData:")
     for (const [key, value] of formData.entries()) {
       if (key === "file" && value instanceof File) {
-        console.log(`${key}: ${value.name} (${value.type}, ${value.size} bytes)`);
+        console.log(
+          `${key}: ${value.name} (${value.type}, ${value.size} bytes)`
+        )
       } else {
-        console.log(`${key}: ${value}`);
+        console.log(`${key}: ${value}`)
       }
     }
 
     const response = await apiClient.post<HealthRecordResponse>(
-        "/record",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-    );
+      "/record",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    )
 
-    console.log("Upload success:", response.data);
-    return response.data;
+    console.log("Upload success:", response.data)
+    return response.data
   } catch (error) {
-    console.error("Upload failed:", error);
+    console.error("Upload failed:", error)
 
     if (axios.isAxiosError(error) && error.response) {
-      console.error("API Error Response:", error.response.data);
+      console.error("API Error Response:", error.response.data)
 
       if (error.response.status === 401) {
-        safeLocalStorage.removeItem("accessToken");
-        setAuthToken(null);
-        throw new Error("Your session has expired. Please log in again.");
+        safeLocalStorage.removeItem("accessToken")
+        setAuthToken(null)
+        throw new Error("Your session has expired. Please log in again.")
       }
 
-      throw new Error(error.response.data?.message || "Upload failed");
+      throw new Error(error.response.data?.message || "Upload failed")
     }
 
-    throw error;
+    throw error
   }
 }
 
-export async function confirmTransaction(recordId: string, txid: string): Promise<void> {
+export async function confirmTransaction(
+  recordId: string,
+  txid: string
+): Promise<void> {
   try {
-    const token = safeLocalStorage.getItem("accessToken");
-    console.log("Txid:", txid);
-    if (!token) throw new Error("No authentication token found");
-    setAuthToken(token);
+    const token = safeLocalStorage.getItem("accessToken")
+    console.log("Txid:", txid)
+    if (!token) throw new Error("No authentication token found")
+    setAuthToken(token)
 
-    const payload = JSON.stringify({txid});
-    const response = await apiClient.post(`/record/confirm-transaction/${recordId}`,
-        payload);
-    console.log("Transaction confirmed:", response.data);
+    const payload = JSON.stringify({ txid })
+    const response = await apiClient.post(
+      `/record/confirm-transaction/${recordId}`,
+      payload
+    )
+    console.log("Transaction confirmed:", response.data)
   } catch (error) {
-    console.error("Error confirming transaction:", error);
+    console.error("Error confirming transaction:", error)
 
     if (axios.isAxiosError(error) && error.response) {
-      console.error("API Error Response:", error.response.data);
+      console.error("API Error Response:", error.response.data)
 
       if (error.response.status === 401) {
-        safeLocalStorage.removeItem("accessToken");
-        setAuthToken(null);
-        throw new Error("Your session has expired. Please log in again.");
+        safeLocalStorage.removeItem("accessToken")
+        setAuthToken(null)
+        throw new Error("Your session has expired. Please log in again.")
       }
 
-      throw new Error(error.response.data?.message || "Transaction confirmation failed");
+      throw new Error(
+        error.response.data?.message || "Transaction confirmation failed"
+      )
     }
 
-    throw error;
+    throw error
   }
 }
 
@@ -547,7 +558,6 @@ export interface UserRecord {
   notes: string
 }
 
-
 export async function getUserRecord(): Promise<UserRecord[]> {
   try {
     const currentUser = await getCurrentUser()
@@ -558,6 +568,95 @@ export async function getUserRecord(): Promise<UserRecord[]> {
     return response.data
   } catch (error) {
     console.error("Error fetching user records:", error)
+    throw error
+  }
+}
+
+// Challenge APIs
+export async function createChallenge(
+  data: ChallengeInput
+): Promise<Challenge> {
+  try {
+    const response = await apiClient.post<Challenge>("/challenges", data)
+    return response.data
+  } catch (error) {
+    console.error("Error creating challenge:", error)
+    throw error
+  }
+}
+
+export async function checkChallenge(
+  data: ChallengeCheckInput
+): Promise<unknown> {
+  try {
+    const response = await apiClient.post<unknown>("/challenges", data)
+    return response.data
+  } catch (error) {
+    console.error("Error checking challenge:", error)
+    throw error
+  }
+}
+
+export async function getAllChallenges(): Promise<Challenge[]> {
+  try {
+    const response = await apiClient.get<Challenge[]>("/challenges")
+    return response.data
+  } catch (error) {
+    console.error("Error fetching all challenges:", error)
+    throw error
+  }
+}
+
+export async function getChallengeById(id: number): Promise<Challenge> {
+  try {
+    const response = await apiClient.get<Challenge>(`/challenges/${id}`)
+    return response.data
+  } catch (error) {
+    console.error("Error fetching challenge by id:", error)
+    throw error
+  }
+}
+
+export async function updateChallenge(
+  id: number,
+  data: ChallengeInput
+): Promise<Challenge> {
+  try {
+    const response = await apiClient.put<Challenge>(`/challenges/${id}`, data)
+    return response.data
+  } catch (error) {
+    console.error("Error updating challenge:", error)
+    throw error
+  }
+}
+
+export async function deleteChallenge(id: number): Promise<void> {
+  try {
+    await apiClient.delete(`/challenges/${id}`)
+  } catch (error) {
+    console.error("Error deleting challenge:", error)
+    throw error
+  }
+}
+
+export async function checkChallengeImage(
+  challengeId: number,
+  file: File
+): Promise<unknown> {
+  try {
+    const token = safeLocalStorage.getItem("accessToken")
+    if (!token) throw new Error("No authentication token found")
+    setAuthToken(token)
+    const formData = new FormData()
+    formData.append("file", file)
+    const response = await apiClient.post<unknown>(
+      `/challenges/${challengeId}/check-image`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    )
+    return response.data
+  } catch (error) {
+    console.error("Error checking challenge image:", error)
     throw error
   }
 }
