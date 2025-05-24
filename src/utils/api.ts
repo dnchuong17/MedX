@@ -348,7 +348,7 @@ export async function getUserByEmail(email: string): Promise<User> {
 
     setAuthToken(token)
 
-    const response = await apiClient.get<User>(`/user`, {
+    const response = await apiClient.get<User>(`/user/email`, {
       params: { email },
     })
     return response.data
@@ -441,9 +441,7 @@ export interface HealthRecordResponse {
   notes: string;
   transaction: string;
 }
-/**
- * Uploads a health record with optional image attachment
- */
+
 
 export async function uploadHealthRecord(
     data: HealthRecordInput
