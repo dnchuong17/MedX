@@ -538,3 +538,28 @@ export async function confirmTransaction(recordId: string, txid: string): Promis
     throw error;
   }
 }
+
+export interface UserRecord {
+  url: string
+  versionOf: string
+  doctor: string
+  category: string
+  facility: string
+  date: string
+  notes: string
+}
+
+
+export async function getUserRecord(): Promise<UserRecord[]> {
+  try {
+    const currentUser = await getCurrentUser()
+    const userId = currentUser.id
+
+    const response = await apiClient.get<UserRecord[]>(`/record/user/${userId}`)
+    console.log("User records retrieved:", response.data)
+    return response.data
+  } catch (error) {
+    console.error("Error fetching user records:", error)
+    throw error
+  }
+}
