@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaPaperclip } from "react-icons/fa";
-import { ArrowLeft, Search, Settings, FileText, Image } from "lucide-react";
+import { ArrowLeft, Search, Settings, FileText, Camera, X, RotateCcw, FlipHorizontal } from "lucide-react";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import BottomNavigation from "@/components/navbar";
 import {
@@ -42,6 +41,16 @@ const HealthRecordForm = () => {
     const [curvePublicKey, setCurvePublicKey] = useState<Uint8Array | null>(null);
     const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
     const { connection } = useConnection();
+
+    // Enhanced camera states
+    const [showCamera, setShowCamera] = useState(false);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [isInitializingCamera, setIsInitializingCamera] = useState(false);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+    const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+    const [isCapturing, setIsCapturing] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split("T")[0],
@@ -137,6 +146,183 @@ const HealthRecordForm = () => {
         setFilePreview(null);
     };
 
+    const startCamera = useCallback(async () => {
+        try {
+            setIsInitializingCamera(true);
+            setErrorMessage(null);
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                setStream(null);
+            }
+
+            const constraints = {
+                video: {
+                    facingMode: facingMode,
+                    width: { ideal: 1920, max: 1920 },
+                    height: { ideal: 1080, max: 1080 }
+                }
+            };
+
+            const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            setStream(mediaStream);
+            setShowCamera(true);
+
+            if (videoRef.current) {
+                videoRef.current.srcObject = mediaStream;
+
+                const videoReady = new Promise((resolve, reject) => {
+                    const video = videoRef.current;
+                    if (!video) {
+                        reject(new Error('Video element not available'));
+                        return;
+                    }
+
+                    const onLoadedMetadata = () => {
+                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                        video.removeEventListener('error', onError);
+                        resolve(null);
+                    };
+
+                    const onError = (error) => {
+                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                        video.removeEventListener('error', onError);
+                        reject(error);
+                    };
+
+                    video.addEventListener('loadedmetadata', onLoadedMetadata);
+                    video.addEventListener('error', onError);
+
+                    setTimeout(() => {
+                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                        video.removeEventListener('error', onError);
+                        resolve(null);
+                    }, 5000);
+                });
+
+                try {
+                    await videoReady;
+                    await videoRef.current.play();
+                    setIsInitializingCamera(false);
+                } catch (playError) {
+                    console.warn('Video play error:', playError);
+                    setIsInitializingCamera(false);
+                }
+            }
+        } catch (err) {
+            console.error('Error accessing camera:', err);
+            setIsInitializingCamera(false);
+
+            let errorMsg = 'Unable to access camera.';
+            if (err.name === 'NotAllowedError') {
+                errorMsg = 'Camera access denied. Please allow camera permissions and try again.';
+            } else if (err.name === 'NotFoundError') {
+                errorMsg = 'No camera found on this device.';
+            } else if (err.name === 'NotReadableError') {
+                errorMsg = 'Camera is already in use by another application.';
+            } else if (err.name === 'NotSupportedError') {
+                errorMsg = 'Camera not supported on this device.';
+            }
+
+            setErrorMessage(errorMsg);
+            setShowCamera(false);
+        }
+    }, [facingMode]);
+
+    const stopCamera = useCallback(() => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setShowCamera(false);
+        setCapturedPhoto(null);
+        setIsInitializingCamera(false);
+    }, [stream]);
+
+    const switchCamera = useCallback(async () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    }, [stream]);
+
+    React.useEffect(() => {
+        if (isInitializingCamera) {
+            const timeout = setTimeout(() => {
+                console.warn('Camera initialization timeout');
+                setIsInitializingCamera(false);
+                if (!stream) {
+                    setErrorMessage('Camera initialization timed out. Please try again.');
+                }
+            }, 10000);
+
+            return () => clearTimeout(timeout);
+        }
+    }, [isInitializingCamera, stream]);
+
+    const capturePhoto = useCallback(() => {
+        if (!videoRef.current || !canvasRef.current || isCapturing) return;
+
+        setIsCapturing(true);
+
+        try {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+
+            if (!context) {
+                throw new Error('Could not get canvas context');
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            setCapturedPhoto(dataUrl);
+
+        } catch (error) {
+            console.error('Error capturing photo:', error);
+            setErrorMessage('Failed to capture photo. Please try again.');
+        } finally {
+            setIsCapturing(false);
+        }
+    }, [isCapturing]);
+
+    const confirmPhoto = useCallback(() => {
+        if (!capturedPhoto || !canvasRef.current) return;
+
+        canvasRef.current.toBlob((blob) => {
+            if (blob) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const file = new File([blob], `health-record-${timestamp}.jpg`, {
+                    type: 'image/jpeg'
+                });
+
+                if (filePreview?.url) {
+                    URL.revokeObjectURL(filePreview.url);
+                }
+
+                setSelectedFile(file);
+                const fileUrl = URL.createObjectURL(file);
+                setFilePreview({
+                    file,
+                    url: fileUrl,
+                    type: 'image'
+                });
+
+                stopCamera();
+                setSuccessMessage('Photo captured successfully!');
+            }
+        }, 'image/jpeg', 0.9);
+    }, [capturedPhoto, filePreview?.url, stopCamera]);
+
+    const retakePhoto = useCallback(() => {
+        setCapturedPhoto(null);
+    }, []);
+
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
@@ -192,7 +378,6 @@ const HealthRecordForm = () => {
                 return;
             }
 
-            // Reset form
             setFormData({
                 date: new Date().toISOString().split("T")[0],
                 doctorFacility: "",
@@ -218,12 +403,18 @@ const HealthRecordForm = () => {
     };
 
     React.useEffect(() => {
+        if (showCamera && !stream) {
+            startCamera();
+        }
+    }, [showCamera, facingMode]);
+
+    React.useEffect(() => {
         return () => {
-            if (filePreview?.url) {
-                URL.revokeObjectURL(filePreview.url);
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
             }
         };
-    }, [filePreview?.url]);
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-800 flex justify-center">
@@ -334,6 +525,114 @@ const HealthRecordForm = () => {
 
                     {entryMode === 'upload' && (
                         <div>
+                            {/* Enhanced Camera Modal */}
+                            {showCamera && (
+                                <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
+                                    <div className="bg-white rounded-lg max-w-md w-full mx-4 overflow-hidden">
+                                        {/* Camera Header */}
+                                        <div className="flex justify-between items-center p-4 border-b">
+                                            <h3 className="text-lg font-semibold">
+                                                {capturedPhoto ? 'Review Photo' : 'Take Photo'}
+                                            </h3>
+                                            <button
+                                                onClick={stopCamera}
+                                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+
+                                        {/* Camera Content */}
+                                        <div className="relative bg-black">
+                                            {isInitializingCamera && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
+                                                    <div className="text-white text-center">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                                                        <p>Initializing camera...</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {capturedPhoto ? (
+                                                <img
+                                                    src={capturedPhoto}
+                                                    alt="Captured photo"
+                                                    className="w-full h-64 object-cover"
+                                                />
+                                            ) : (
+                                                <video
+                                                    ref={videoRef}
+                                                    autoPlay
+                                                    playsInline
+                                                    muted
+                                                    className="w-full h-64 object-cover"
+                                                    style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                                                />
+                                            )}
+
+                                            <canvas ref={canvasRef} className="hidden" />
+
+                                            {/* Camera Controls Overlay */}
+                                            {!capturedPhoto && !isInitializingCamera && (
+                                                <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={switchCamera}
+                                                        className="bg-black bg-opacity-50 text-white p-2 rounded-full mr-4 hover:bg-opacity-75 transition-all"
+                                                    >
+                                                        <FlipHorizontal size={20} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Camera Action Buttons */}
+                                        <div className="p-4 space-y-3">
+                                            {capturedPhoto ? (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={retakePhoto}
+                                                        className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                                                    >
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <RotateCcw size={16} />
+                                                            Retake
+                                                        </div>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={confirmPhoto}
+                                                        className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                                                    >
+                                                        Use Photo
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={capturePhoto}
+                                                    disabled={isCapturing || isInitializingCamera}
+                                                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white py-4 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    {isCapturing ? (
+                                                        <>
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                            Capturing...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Camera size={20} />
+                                                            Capture Photo
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="w-full border border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-white mb-6">
                                 {!filePreview ? (
                                     <>
@@ -361,19 +660,17 @@ const HealthRecordForm = () => {
                                                     className="hidden"
                                                 />
                                             </label>
-                                            <label className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg border border-gray-300 text-center cursor-pointer hover:bg-gray-200 transition-colors">
+                                            <button
+                                                type="button"
+                                                onClick={startCamera}
+                                                disabled={isInitializingCamera}
+                                                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                            >
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Image size={16} />
-                                                    Take Photo
+                                                    <Camera size={16} />
+                                                    {isInitializingCamera ? 'Starting...' : 'Take Photo'}
                                                 </div>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    capture="environment"
-                                                    onChange={handleFileChange}
-                                                    className="hidden"
-                                                />
-                                            </label>
+                                            </button>
                                         </div>
                                     </>
                                 ) : (
@@ -521,6 +818,7 @@ const HealthRecordForm = () => {
                                 setApiResponse(null);
                                 setIsAuthenticated(false);
                                 setSignature(null);
+                                stopCamera(); // Also stop camera if running
                             }}
                         >
                             Cancel
