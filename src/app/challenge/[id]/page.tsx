@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useRef, useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,8 +15,10 @@ import {
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import BottomNavigation from "@/components/navbar"
-import { checkChallengeImage } from "@/utils/api"
+import { checkChallengeImage, getChallengeById } from "@/utils/api"
 import Image from "next/image"
+import { useDispatch } from "react-redux"
+import { markChallengeComplete } from "@/store/slices/challengesSlice"
 
 const ChallengeEvidencePage = () => {
   const router = useRouter()
@@ -29,6 +31,28 @@ const ChallengeEvidencePage = () => {
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [challenge, setChallenge] = useState<null | { description: string }>(
+    null
+  )
+  const [isChallengeLoading, setIsChallengeLoading] = useState(true)
+  const [challengeError, setChallengeError] = useState<string | null>(null)
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    async function fetchChallenge() {
+      setIsChallengeLoading(true)
+      setChallengeError(null)
+      try {
+        const data = await getChallengeById(Number(id))
+        setChallenge(data)
+      } catch {
+        setChallengeError("Failed to load challenge")
+      } finally {
+        setIsChallengeLoading(false)
+      }
+    }
+    if (id) fetchChallenge()
+  }, [id])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {
@@ -78,6 +102,9 @@ const ChallengeEvidencePage = () => {
       setIsSuccess(resp.success)
       setUploadMessage(resp.message)
       setShowModal(true)
+      if (resp.success) {
+        dispatch(markChallengeComplete(Number(id)))
+      }
     } catch {
       setIsSuccess(false)
       setUploadMessage("Upload failed. Please try again.")
@@ -96,7 +123,15 @@ const ChallengeEvidencePage = () => {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Upload Evidence for Challenge #{id}</CardTitle>
+            <CardTitle>
+              {isChallengeLoading
+                ? "Loading..."
+                : challengeError
+                ? challengeError
+                : `Upload Evidence for Challenge "${
+                    challenge?.description ?? ""
+                  }"`}
+            </CardTitle>
             <CardDescription>
               Please upload a photo or file as evidence to complete this
               challenge.
