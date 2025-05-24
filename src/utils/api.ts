@@ -550,17 +550,16 @@ export interface UserRecord {
 }
 
 
-export async function getUserRecord(): Promise<UserRecord> {
+export async function getUserRecord(): Promise<UserRecord[]> {
   try {
     const currentUser = await getCurrentUser()
     const userId = currentUser.id
 
-    const response = await apiClient.get<UserRecord>(`/record/user/${userId}`)
-    console.log("User record retrieved:", response.data)
+    const response = await apiClient.get<UserRecord[]>(`/record/user/${userId}`)
+    console.log("User records retrieved:", response.data)
     return response.data
   } catch (error) {
-    console.error("Error fetching user record:", error)
+    console.error("Error fetching user records:", error)
     throw error
   }
 }
-

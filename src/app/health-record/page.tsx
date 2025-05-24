@@ -14,11 +14,11 @@ import { getUserRecord } from "@/utils/api";
 
 export interface UserRecord {
     url: string;
-    versionOf: string;
+    versionOf: string | null;
     doctor: string;
     category: string;
     facility: string;
-    date: string;
+    date: string | null;
     notes: string;
 }
 
@@ -30,6 +30,7 @@ interface UIRecord {
     doctor?: string;
     lab?: string;
     type: string;
+    location: string;
     status: string;
     url?: string;
     notes?: string;
@@ -46,44 +47,48 @@ export default function HealthRecordsApp() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
-    // Transform API record to UI format (since getUserRecord returns single record)
-    const transformRecord = (apiRecord: UserRecord, index: number = 0): UIRecord => {
-        return {
+    // Transform API records to UI format
+    const transformRecords = (apiRecords: UserRecord[]): UIRecord[] => {
+        return apiRecords.map((record, index) => ({
             id: index + 1,
-            title: apiRecord.category || "Health Record",
-            date: apiRecord.date ? formatDate(apiRecord.date) : "N/A",
-            doctor: apiRecord.doctor,
-            type: apiRecord.category || "General",
-            location: apiRecord.facility || "Unknown",
-            status: "Shared",
-            url: apiRecord.url,
-            notes: apiRecord.notes
-        };
+            title: record.category || "Health Record",
+            date: record.date ? formatDate(record.date) : "N/A",
+            doctor: record.doctor,
+            type: record.category || "General",
+            location: record.facility || "Unknown",
+            status: record.versionOf ? "Updated" : "Shared", // Use versionOf to determine status
+            url: record.url,
+            notes: record.notes
+        }));
     };
 
+    // Format date from API to display format
     const formatDate = (dateString: string): string => {
         try {
             const date = new Date(dateString);
-            return date.toLocaleDateString('en-GB');
+            return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
         } catch {
             return dateString;
         }
     };
 
+    // Fetch user records from API using your existing functions
     const fetchUserRecords = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const apiRecord = await getUserRecord();
+            // Use your existing API function - assuming it now returns UserRecord[]
+            const apiRecords = await getUserRecord() as UserRecord[];
 
-            const transformedRecord = transformRecord(apiRecord, 0);
-            setAllRecords([transformedRecord]);
+            // Transform records array to UI format
+            const transformedRecords = transformRecords(apiRecords);
+            setAllRecords(transformedRecords);
 
         } catch (err) {
             console.error("Error fetching user records:", err);
             setError(err instanceof Error ? err.message : "Failed to fetch records");
-            setAllRecords([]);
+
         } finally {
             setLoading(false);
         }
@@ -93,8 +98,30 @@ export default function HealthRecordsApp() {
 
     const openRecord = (record: UIRecord) => {
         if (record.url) {
-            const decodedUrl = decodeURIComponent(record.url);
-            window.open(decodedUrl, '_blank');
+            try {
+                let cleanUrl = record.url.trim();
+
+                cleanUrl = cleanUrl.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+                if (cleanUrl.includes('dweb.link/ipfs/')) {
+                    console.log("Opening IPFS URL:", cleanUrl);
+                    window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+                } else if (cleanUrl.includes('ipfs://')) {
+                    const hash = cleanUrl.replace('ipfs://', '');
+                    const gatewayUrl = `https://dweb.link/ipfs/${hash}`;
+                    console.log("Converting IPFS URL:", gatewayUrl);
+                    window.open(gatewayUrl, '_blank', 'noopener,noreferrer');
+                } else {
+                    const decodedUrl = decodeURIComponent(cleanUrl);
+                    console.log("Opening decoded URL:", decodedUrl);
+                    window.open(decodedUrl, '_blank', 'noopener,noreferrer');
+                }
+            } catch (error) {
+                console.error("Error opening URL:", error);
+                window.open(record.url, '_blank', 'noopener,noreferrer');
+            }
+        } else {
+            console.warn("No URL available for this record");
         }
     };
 
@@ -156,6 +183,7 @@ export default function HealthRecordsApp() {
         }
 
         filtered.sort((a, b) => {
+            // Handle date sorting
             const parseDate = (dateStr: string) => {
                 if (dateStr === "N/A") return new Date(0);
                 const parts = dateStr.split("/");
