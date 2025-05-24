@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import BottomNavigation from "@/components/navbar"
+import { checkChallengeImage } from "@/utils/api"
 
 const ChallengeEvidencePage = () => {
   const router = useRouter()
@@ -64,11 +65,15 @@ const ChallengeEvidencePage = () => {
     e.preventDefault()
     if (!file) return
     setIsLoading(true)
-    // Fake upload delay
-    setTimeout(() => {
-      setIsLoading(false)
+    setIsSuccess(false)
+    try {
+      await checkChallengeImage(Number(id), file)
       setIsSuccess(true)
-    }, 1200)
+    } catch {
+      setIsSuccess(false)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
