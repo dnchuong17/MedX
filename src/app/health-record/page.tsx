@@ -9,8 +9,17 @@ import {
 import BottomNavigation from "@/components/navbar";
 import { useRouter } from "next/navigation";
 import AddButton from "@/components/health-record/add.button";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import "@solana/wallet-adapter-react-ui/styles.css";
+
 
 import { getUserRecord } from "@/utils/api";
+import nacl from "tweetnacl";
+import bs58 from "bs58";
+import { createHash } from "crypto";
+import sodium from 'libsodium-wrappers-sumo';
+
 
 export interface UserRecord {
     url: string;
@@ -21,6 +30,7 @@ export interface UserRecord {
     date: string | null;
     notes: string;
     encryptedData: string;
+    fileName: string;
 }
 
 
@@ -29,16 +39,17 @@ interface UIRecord {
     title: string;
     date: string;
     doctor?: string;
-    lab?: string;
     type: string;
-    location: string;
     status: string;
     url?: string;
     notes?: string;
     encryptedData?: string;
+    fileName: string;
 }
 
+
 export default function HealthRecordsApp() {
+    const { connected, publicKey, signMessage } = useWallet();
     const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
     const [filterOption, setFilterOption] = useState("all");
     const [sortOption, setSortOption] = useState("date-newest");
@@ -49,6 +60,76 @@ export default function HealthRecordsApp() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
+
+    // Authentication states
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [signature, setSignature] = useState<string | null>(null);
+    const [seed, setSeed] = useState<Uint8Array | null>(null);
+    const [curvePrivateKey, setCurvePrivateKey] = useState<Uint8Array | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [authError, setAuthError] = useState<string | null>(null);
+    const [curvePublicKey, setCurvePublicKey] = useState<Uint8Array | null>(null);
+
+
+    // Authentication function similar to HealthRecordForm
+    const authenticateUser = async () => {
+        if (!connected || !publicKey || !signMessage) {
+            setAuthError("Wallet not connected or doesn't support message signing.");
+            return;
+        }
+
+
+        try {
+            setIsAuthenticating(true);
+            setAuthError(null);
+
+
+            const message = `Authenticate health record access`;
+            const messageBytes = new TextEncoder().encode(message);
+            const messageSignature = await signMessage(messageBytes);
+            const signatureBase58 = bs58.encode(messageSignature);
+
+
+            const isValid = nacl.sign.detached.verify(
+                messageBytes,
+                messageSignature,
+                publicKey.toBytes()
+            );
+
+
+            if (isValid) {
+                await sodium.ready;
+                const derivedSeed = createHash("sha256").update(messageSignature).digest();
+                const keypair = nacl.sign.keyPair.fromSeed(new Uint8Array(derivedSeed));
+
+
+                // Convert Ed25519 keys to Curve25519 for decryption
+                const curvePrivKey = sodium.crypto_sign_ed25519_sk_to_curve25519(keypair.secretKey);
+                const curvePubKey = sodium.crypto_sign_ed25519_pk_to_curve25519(keypair.publicKey);
+                const encryptionKeyBase58 = bs58.encode(keypair.publicKey);
+
+                console.log('Encryption key: ',encryptionKeyBase58);
+
+                setSeed(new Uint8Array(derivedSeed));
+                setCurvePrivateKey(curvePrivKey);
+                setCurvePublicKey(curvePubKey);
+                setSignature(signatureBase58);
+                setIsAuthenticated(true);
+                setSuccessMessage("Authentication successful! You can now decrypt your health records.");
+                setTimeout(() => setSuccessMessage(null), 3000);
+            } else {
+                setAuthError("Signature verification failed.");
+            }
+        } catch (err) {
+            console.error("Authentication error:", err);
+            setAuthError("Failed to authenticate. Please try again.");
+        } finally {
+            setIsAuthenticating(false);
+        }
+    };
+
+
     // Transform API records to UI format
     const transformRecords = (apiRecords: UserRecord[]): UIRecord[] => {
         return apiRecords.map((record, index) => ({
@@ -58,73 +139,111 @@ export default function HealthRecordsApp() {
             doctor: record.doctor,
             type: record.category || "General",
             location: record.facility || "Unknown",
-            status: record.versionOf ? "Updated" : "Shared", // Use versionOf to determine status
+            status: record.versionOf ? "Updated" : "Shared",
             url: record.url,
             notes: record.notes,
             encryptedData: record.encryptedData,
+            fileName: record.fileName,
         }));
     };
+
 
     // Format date from API to display format
     const formatDate = (dateString: string): string => {
         try {
             const date = new Date(dateString);
-            return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+            return date.toLocaleDateString('en-GB');
         } catch {
             return dateString;
         }
     };
 
-    // Fetch user records from API using your existing functions
+
     const fetchUserRecords = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // Use your existing API function - assuming it now returns UserRecord[]
             const apiRecords = await getUserRecord() as UserRecord[];
-
-            // Transform records array to UI format
             const transformedRecords = transformRecords(apiRecords);
             setAllRecords(transformedRecords);
-
         } catch (err) {
             console.error("Error fetching user records:", err);
             setError(err instanceof Error ? err.message : "Failed to fetch records");
-
         } finally {
             setLoading(false);
         }
     };
 
 
+    const openRecord = async (record: UIRecord & { encryptedData?: string }) => {
+        if (!isAuthenticated || !curvePrivateKey || !curvePublicKey) {
+            setAuthError("Please authenticate first to decrypt and view your health records.");
+            return;
+        }
 
-    const openRecord = (record: UIRecord) => {
-        if (record.url) {
-            try {
-                let cleanUrl = record.url.trim();
+        try {
+            setLoading(true);
+            let decryptedBlob: Blob | null = null;
 
-                cleanUrl = cleanUrl.replace(/[\u200B-\u200D\uFEFF]/g, '');
+            // Prefer encryptedData if present
+            if (record.encryptedData) {
+                await sodium.ready;
+                const cleaned = record.encryptedData.replace(/[\s\n\r]+/g, "").trim();
+                let encrypted: Uint8Array;
 
-                if (cleanUrl.includes('dweb.link/ipfs/')) {
-                    console.log("Opening IPFS URL:", cleanUrl);
-                    window.open(cleanUrl, '_blank', 'noopener,noreferrer');
-                } else if (cleanUrl.includes('ipfs://')) {
-                    const hash = cleanUrl.replace('ipfs://', '');
-                    const gatewayUrl = `https://dweb.link/ipfs/${hash}`;
-                    console.log("Converting IPFS URL:", gatewayUrl);
-                    window.open(gatewayUrl, '_blank', 'noopener,noreferrer');
-                } else {
-                    const decodedUrl = decodeURIComponent(cleanUrl);
-                    console.log("Opening decoded URL:", decodedUrl);
-                    window.open(decodedUrl, '_blank', 'noopener,noreferrer');
+                try {
+                    encrypted = sodium.from_base64(cleaned, sodium.base64_variants.ORIGINAL);
+                } catch (err) {
+                    console.error("Base64 decoding failed:", err);
+                    throw new Error("Invalid base64 string");
                 }
-            } catch (error) {
-                console.error("Error opening URL:", error);
-                window.open(record.url, '_blank', 'noopener,noreferrer');
+
+                const decryptedData = sodium.crypto_box_seal_open(
+                    encrypted,
+                    curvePublicKey,
+                    curvePrivateKey
+                );
+
+                if (!decryptedData) throw new Error("Decryption failed.");
+                const mimeType = record.fileName?.endsWith(".pdf")
+                    ? "application/pdf"
+                    : "image/png";
+
+                decryptedBlob = new Blob([decryptedData], { type: mimeType });
             }
-        } else {
-            console.warn("No URL available for this record");
+
+            if (decryptedBlob) {
+                const decryptedUrl = URL.createObjectURL(decryptedBlob);
+                const newWindow = window.open('', '_blank');
+                if (newWindow) {
+                    if (decryptedBlob.type.startsWith('image/')) {
+                        newWindow.document.write(`
+                        <html>
+                            <head><title>Health Record - ${record.title}</title></head>
+                            <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f5f5f5;">
+                                <img src="${decryptedUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                            </body>
+                        </html>
+                    `);
+                    } else {
+                        newWindow.location.href = decryptedUrl;
+                    }
+                } else {
+                    const link = document.createElement('a');
+                    link.href = decryptedUrl;
+                    link.download = `decrypted-${record.title}`;
+                    link.click();
+                }
+                setTimeout(() => URL.revokeObjectURL(decryptedUrl), 60000);
+            } else {
+                throw new Error("No valid decrypted data found.");
+            }
+        } catch (error) {
+            console.error("Error opening/decrypting record:", error);
+            setError("Failed to decrypt and open the health record. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -132,11 +251,13 @@ export default function HealthRecordsApp() {
         setOpenDropdown(openDropdown === type ? null : type);
     };
 
+
     const toggleSelectRecord = (id: number) => {
         setSelectedRecords((prev) =>
             prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
         );
     };
+
 
     const toggleSelectAll = () => {
         if (selectedRecords.length === filteredRecords.length) {
@@ -146,36 +267,44 @@ export default function HealthRecordsApp() {
         }
     };
 
+
     const filterByType = (type: string) => {
         setFilterOption(type === "all" ? "all" : `type-${type}`);
         setOpenDropdown(null);
     };
+
 
     const filterByStatus = (status: string) => {
         setFilterOption(status === "all" ? "all" : `status-${status}`);
         setOpenDropdown(null);
     };
 
+
     const handleDateSort = (option: string) => {
         setSortOption(option);
         setOpenDropdown(null);
     };
 
+
     const handleClick = () => {
         router.push('/health-record/temporary-link');
     };
+
 
     const getUniqueCategories = () => {
         const categories = [...new Set(allRecords.map(r => r.type))];
         return categories.filter(Boolean);
     };
 
+
     useEffect(() => {
         fetchUserRecords();
     }, []);
 
+
     useEffect(() => {
         let filtered = [...allRecords];
+
 
         if (filterOption.startsWith("type-")) {
             const type = filterOption.slice(5);
@@ -185,8 +314,8 @@ export default function HealthRecordsApp() {
             filtered = status === "all" ? filtered : filtered.filter((r) => r.status === status);
         }
 
+
         filtered.sort((a, b) => {
-            // Handle date sorting
             const parseDate = (dateStr: string) => {
                 if (dateStr === "N/A") return new Date(0);
                 const parts = dateStr.split("/");
@@ -196,19 +325,23 @@ export default function HealthRecordsApp() {
                 return new Date(dateStr);
             };
 
+
             const dateA = parseDate(a.date);
             const dateB = parseDate(b.date);
+
 
             return sortOption === "date-newest"
                 ? dateB.getTime() - dateA.getTime()
                 : dateA.getTime() - dateB.getTime();
         });
 
+
         setFilteredRecords(filtered);
         setSelectedRecords([]);
     }, [filterOption, sortOption, allRecords]);
 
-    if (loading) {
+
+    if (loading && !isAuthenticating) {
         return (
             <div className="min-h-screen flex justify-center items-center p-4">
                 <div className="text-center">
@@ -219,9 +352,11 @@ export default function HealthRecordsApp() {
         );
     }
 
+
     return (
         <div className="min-h-screen flex justify-center p-4">
             <div className="bg-white w-full max-w-md overflow-hidden relative pb-20">
+
 
                 {/* Header */}
                 <div className="p-4 flex justify-between items-center">
@@ -240,6 +375,79 @@ export default function HealthRecordsApp() {
                     </div>
                 </div>
 
+
+                {/* Wallet Connection & Authentication Section */}
+                <div className="px-4 mb-4">
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <h3 className="text-sm font-medium text-indigo-800 mb-2">Wallet & Authentication</h3>
+                        {!connected ? (
+                            <div className="space-y-2">
+                                <p className="text-sm text-indigo-600">Connect your wallet to decrypt health records</p>
+                                <WalletMultiButton className="w-full" />
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-green-600">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                                        <path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                    <span className="text-sm font-medium">Wallet Connected</span>
+                                </div>
+
+
+                                <div className={`flex items-center gap-2 ${isAuthenticated ? 'text-green-600' : 'text-orange-600'}`}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                                        {isAuthenticated && <path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    </svg>
+                                    <span className="text-sm font-medium">
+                                       {isAuthenticated ? 'Authenticated - Can decrypt records' : 'Authentication Required for Decryption'}
+                                   </span>
+                                </div>
+
+
+                                {!isAuthenticated && (
+                                    <button
+                                        onClick={authenticateUser}
+                                        disabled={isAuthenticating}
+                                        className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg text-sm font-medium disabled:opacity-50"
+                                    >
+                                        {isAuthenticating ? 'Authenticating...' : 'Authenticate to Decrypt Records'}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+
+                {/* Success/Error Messages */}
+                {successMessage && (
+                    <div className="px-4 mb-4">
+                        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+                            {successMessage}
+                        </div>
+                    </div>
+                )}
+
+
+                {authError && (
+                    <div className="px-4 mb-4">
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            {authError}
+                            <button
+                                onClick={() => setAuthError(null)}
+                                className="absolute top-0 bottom-0 right-0 px-4 py-3"
+                            >
+                                <span className="sr-only">Dismiss</span>
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
                 {/* Error Message */}
                 {error && (
                     <div className="px-4 mt-2">
@@ -256,13 +464,14 @@ export default function HealthRecordsApp() {
                     </div>
                 )}
 
+
                 {/* Filter Tags */}
                 {filterOption !== "all" && (
                     <div className="px-4 mt-2">
                         <div className="bg-indigo-50 rounded-lg p-2 text-indigo-800 text-sm flex justify-between items-center">
-                            <span>
-                                Showing: {filterOption.startsWith("type-") ? `Type - ${filterOption.slice(5)}` : `Status - ${filterOption.slice(7)}`}
-                            </span>
+                           <span>
+                               Showing: {filterOption.startsWith("type-") ? `Type - ${filterOption.slice(5)}` : `Status - ${filterOption.slice(7)}`}
+                           </span>
                             <button
                                 onClick={() => setFilterOption("all")}
                                 className="text-indigo-600 font-medium"
@@ -272,6 +481,7 @@ export default function HealthRecordsApp() {
                         </div>
                     </div>
                 )}
+
 
                 {/* Filters */}
                 <div className="px-4 mt-4 flex justify-between items-center">
@@ -333,6 +543,7 @@ export default function HealthRecordsApp() {
                         ))}
                     </div>
 
+
                     {/* Select All */}
                     <div className="flex items-center ml-2">
                         <span className="text-sm mr-2 font-medium">Select All</span>
@@ -347,17 +558,22 @@ export default function HealthRecordsApp() {
                     </div>
                 </div>
 
+
                 {/* Records List */}
                 <div className="px-4 py-4 space-y-4">
                     {filteredRecords.length > 0 ? (
                         filteredRecords.map((record) => (
                             <div
                                 key={record.id}
-                                className="border border-gray-200 rounded-xl p-3 flex items-center shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                                onClick={() => openRecord(record)}
+                                className={`border border-gray-200 rounded-xl p-3 flex items-center shadow-sm transition-shadow ${
+                                    isAuthenticated ? 'hover:shadow-md cursor-pointer' : 'opacity-75'
+                                }`}
+                                onClick={() => isAuthenticated ? openRecord(record) : setAuthError("Please authenticate first to view records")}
                             >
                                 <div className="bg-blue-100 rounded-full w-20 h-20 flex items-center justify-center mr-3">
-                                    <span className="text-2xl font-bold">PDF</span>
+                                   <span className="text-2xl font-bold">
+                                       {isAuthenticated ? "🔓" : "🔒"}
+                                   </span>
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="text-lg font-bold">{record.title}</h3>
@@ -376,6 +592,11 @@ export default function HealthRecordsApp() {
                                                 : "bg-yellow-100 text-yellow-700"
                                         }`}>
                                             {record.status}
+                                        </div>
+                                    )}
+                                    {!isAuthenticated && (
+                                        <div className="mt-1 px-3 py-1 rounded-full text-xs inline-block bg-red-100 text-red-700">
+                                            🔒 Encrypted - Authentication Required
                                         </div>
                                     )}
                                 </div>
@@ -413,6 +634,7 @@ export default function HealthRecordsApp() {
                     )}
                 </div>
 
+
                 {/* Share Button */}
                 <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
                     <button
@@ -429,8 +651,12 @@ export default function HealthRecordsApp() {
                     <AddButton />
                 </div>
 
+
                 <BottomNavigation/>
             </div>
         </div>
     );
 }
+
+
+
