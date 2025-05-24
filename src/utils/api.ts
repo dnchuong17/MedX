@@ -416,3 +416,125 @@ export async function getUserByWallet(wallet_address: string): Promise<User> {
     throw error
   }
 }
+
+export interface HealthRecordInput {
+  file?: File;
+  publicKey?: string;
+  date: string;
+  doctor: string;
+  category: string;
+  facility: string;
+  notes: string;
+  userId: string;
+  encryption_key: string;
+  // // Add signature fields
+  // signedMessage?: string;
+  // authSignature?: string;
+}
+
+export interface HealthRecordResponse {
+  url: string;
+  recordId: string;
+  doctor: string;
+  category: string;
+  facility: string;
+  notes: string;
+  transaction: string;
+}
+/**
+ * Uploads a health record with optional image attachment
+ */
+
+export async function uploadHealthRecord(
+    data: HealthRecordInput
+): Promise<HealthRecordResponse> {
+  try {
+    const token = safeLocalStorage.getItem("accessToken");
+    if (!token) throw new Error("No authentication token found");
+
+    setAuthToken(token);
+
+    const formData = new FormData();
+
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+
+    formData.append("date", data.date);
+    formData.append("doctor", data.doctor);
+    formData.append("category", data.category);
+    formData.append("facility", data.facility);
+    formData.append("notes", data.notes);
+    formData.append("userId", data.userId);
+    formData.append("publicKey", data.publicKey || "");
+    formData.append("encryption_key", data.encryption_key || "");
+
+    console.log("Sending FormData:");
+    for (const [key, value] of formData.entries()) {
+      if (key === "file" && value instanceof File) {
+        console.log(`${key}: ${value.name} (${value.type}, ${value.size} bytes)`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
+    }
+
+    const response = await apiClient.post<HealthRecordResponse>(
+        "/record",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+    );
+
+    console.log("Upload success:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Upload failed:", error);
+
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("API Error Response:", error.response.data);
+
+      if (error.response.status === 401) {
+        safeLocalStorage.removeItem("accessToken");
+        setAuthToken(null);
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      throw new Error(error.response.data?.message || "Upload failed");
+    }
+
+    throw error;
+  }
+}
+
+export async function confirmTransaction(recordId: string, txid: string): Promise<void> {
+  try {
+    const token = safeLocalStorage.getItem("accessToken");
+    console.log("Txid:", txid);
+    if (!token) throw new Error("No authentication token found");
+    setAuthToken(token);
+
+    const payload = JSON.stringify({txid});
+    const response = await apiClient.post(`/record/confirm-transaction/${recordId}`,
+        payload);
+    console.log("Transaction confirmed:", response.data);
+  } catch (error) {
+    console.error("Error confirming transaction:", error);
+
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("API Error Response:", error.response.data);
+
+      if (error.response.status === 401) {
+        safeLocalStorage.removeItem("accessToken");
+        setAuthToken(null);
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      throw new Error(error.response.data?.message || "Transaction confirmation failed");
+    }
+
+    throw error;
+  }
+}

@@ -4,13 +4,14 @@ import {
     ChevronLeft,
     Search,
     Settings,
-    Plus,
+
 
     ChevronDown,
 } from "lucide-react";
 import BottomNavigation from "@/components/navbar";
 import {useRouter} from "next/navigation";
-export default function HealthRecordsApp() {
+import ShareButton from "@/components/health-record/share-button";
+import AddButton from "@/components/health-record/add.button";export default function HealthRecordsApp() {
     const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
     const [filterOption, setFilterOption] = useState("all");
     const [sortOption, setSortOption] = useState("date-newest");
@@ -123,14 +124,14 @@ export default function HealthRecordsApp() {
 
                 {/* Header */}
                 <div className="p-4 flex justify-between items-center ">
-                    <ChevronLeft className="text-indigo-600 w-6 h-6" />
+                    <ChevronLeft className="text-indigo-600 w-6 h-6"/>
                     <h1 className="text-indigo-600 text-xl font-semibold">Health Record</h1>
                     <div className="flex space-x-2">
                         <div className="bg-blue-100 rounded-full p-2">
-                            <Search className="w-5 h-5 text-indigo-600" />
+                            <Search className="w-5 h-5 text-indigo-600"/>
                         </div>
                         <div className="bg-blue-100 rounded-full p-2">
-                            <Settings className="w-5 h-5 text-indigo-600" />
+                            <Settings className="w-5 h-5 text-indigo-600"/>
                         </div>
                     </div>
                 </div>
@@ -138,7 +139,8 @@ export default function HealthRecordsApp() {
                 {/* Filter Tags */}
                 {filterOption !== "all" && (
                     <div className="px-4 mt-2">
-                        <div className="bg-indigo-50 rounded-lg p-2 text-indigo-800 text-sm flex justify-between items-center">
+                        <div
+                            className="bg-indigo-50 rounded-lg p-2 text-indigo-800 text-sm flex justify-between items-center">
               <span>
                 Showing: {filterOption.startsWith("type-") ? `Type - ${filterOption.slice(5)}` : `Status - ${filterOption.slice(7)}`}
               </span>
@@ -159,8 +161,8 @@ export default function HealthRecordsApp() {
                             {
                                 label: "Date",
                                 options: [
-                                    { label: "Newest First", value: "date-newest" },
-                                    { label: "Oldest First", value: "date-oldest" },
+                                    {label: "Newest First", value: "date-newest"},
+                                    {label: "Oldest First", value: "date-oldest"},
                                 ],
                                 handler: handleDateSort,
                                 active: sortOption,
@@ -168,10 +170,10 @@ export default function HealthRecordsApp() {
                             {
                                 label: " Type",
                                 options: [
-                                    { label: "All Types", value: "all" },
-                                    { label: "Periodic Check-up", value: "Periodic Check-up" },
-                                    { label: "Test", value: "Test" },
-                                    { label: "Specialist", value: "Specialist" },
+                                    {label: "All Types", value: "all"},
+                                    {label: "Periodic Check-up", value: "Periodic Check-up"},
+                                    {label: "Test", value: "Test"},
+                                    {label: "Specialist", value: "Specialist"},
                                 ],
                                 handler: filterByType,
                                 active: filterOption,
@@ -180,26 +182,27 @@ export default function HealthRecordsApp() {
                             {
                                 label: "Status",
                                 options: [
-                                    { label: "All Status", value: "all" },
-                                    { label: "Shared", value: "Shared" },
-                                    { label: "Pending Verification", value: "Pending Verification" },
+                                    {label: "All Status", value: "all"},
+                                    {label: "Shared", value: "Shared"},
+                                    {label: "Pending Verification", value: "Pending Verification"},
                                 ],
                                 handler: filterByStatus,
                                 active: filterOption,
                                 prefix: "status-",
                             },
-                        ].map(({ label, options, handler, active, prefix = "" }, i) => (
+                        ].map(({label, options, handler, active, prefix = ""}, i) => (
                             <div key={i} className="relative">
                                 <button
                                     onClick={() => toggleDropdown(label)}
                                     className={`${(active.startsWith(prefix) && active !== `${prefix}all`) ? "bg-indigo-100" : "bg-gray-100"} hover:bg-gray-200 rounded-full px-3 py-1.5 text-sm flex items-center shadow-sm`}
                                 >
                                     {label}
-                                    <ChevronDown className="ml-1 w-4 h-4" />
+                                    <ChevronDown className="ml-1 w-4 h-4"/>
                                 </button>
                                 {openDropdown === label && (
-                                    <div className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-40">
-                                        {options.map(({ label, value }) => (
+                                    <div
+                                        className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-40">
+                                        {options.map(({label, value}) => (
                                             <button
                                                 key={value}
                                                 onClick={() => handler(value)}
@@ -222,7 +225,7 @@ export default function HealthRecordsApp() {
                             className={`w-6 h-6 rounded-full border flex items-center justify-center cursor-pointer ${selectedRecords.length === filteredRecords.length && filteredRecords.length > 0 ? "bg-indigo-600 border-indigo-600" : "bg-white border-gray-300"}`}
                         >
                             {selectedRecords.length === filteredRecords.length && filteredRecords.length > 0 && (
-                                <div className="w-3 h-3 rounded-full bg-white" />
+                                <div className="w-3 h-3 rounded-full bg-white"/>
                             )}
                         </div>
                     </div>
@@ -232,8 +235,10 @@ export default function HealthRecordsApp() {
                 <div className="px-4 py-4 space-y-4">
                     {filteredRecords.length > 0 ? (
                         filteredRecords.map((record) => (
-                            <div key={record.id} className="border border-gray-200 rounded-xl p-3 flex items-center shadow-sm hover:shadow-md transition-shadow">
-                                <div className="bg-blue-100 rounded-full w-20 h-20 flex items-center justify-center mr-3">
+                            <div key={record.id}
+                                 className="border border-gray-200 rounded-xl p-3 flex items-center shadow-sm hover:shadow-md transition-shadow">
+                                <div
+                                    className="bg-blue-100 rounded-full w-20 h-20 flex items-center justify-center mr-3">
                                     <span className="text-2xl font-bold">PDF</span>
                                 </div>
                                 <div className="flex-1">
@@ -264,7 +269,7 @@ export default function HealthRecordsApp() {
                                     }`}
                                 >
                                     {selectedRecords.includes(record.id) && (
-                                        <div className="w-3 h-3 rounded-full bg-white" />
+                                        <div className="w-3 h-3 rounded-full bg-white"/>
                                     )}
                                 </div>
                             </div>
@@ -283,7 +288,7 @@ export default function HealthRecordsApp() {
                 </div>
 
                 {/* Share Button */}
-                <div className="px-4 py-6">
+                <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
                     <button
                         disabled={selectedRecords.length === 0}
                         className={`${
@@ -294,18 +299,13 @@ export default function HealthRecordsApp() {
                             ? `Share ${selectedRecords.length} Record${selectedRecords.length > 1 ? "s" : ""}`
                             : "Select Records to Share"}
                     </button>
+                    <AddButton />
+
                 </div>
 
-                {/* Add Button */}
-                <div className="absolute right-8 bottom-24">
-                    <button
-                        onClick={handleClick}
-                        className="bg-indigo-600 rounded-full p-3 shadow-lg hover:bg-indigo-700 transition-colors">
-                        <Plus className="text-white w-8 h-8" />
-                    </button>
-                </div>
 
-                <BottomNavigation />
+
+                <BottomNavigation/>
             </div>
         </div>
     );
