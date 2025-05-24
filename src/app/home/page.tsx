@@ -18,7 +18,7 @@ import { FaUserCircle } from "react-icons/fa"
 import { motion } from "framer-motion"
 
 import BottomNavigation from "@/components/navbar"
-import { setAuthToken, apiClient } from "@/utils/api"
+import { setAuthToken, apiClient, getAllChallenges } from "@/utils/api"
 
 interface HealthMetric {
   title: string
@@ -27,11 +27,14 @@ interface HealthMetric {
 }
 
 interface Challenge {
-  id: string
-  title: string
-  progress: number
+  id: number
   description: string
-  icon: React.ReactNode
+  conditionKey: string
+  conditionValue: number
+  unit: string
+  timeFrame: string
+  rewardAmount: number
+  conditionKeywords: string[] | null
 }
 
 interface UserData {
@@ -42,6 +45,9 @@ interface UserData {
 const HomePage = () => {
   const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
+  const [challenges, setChallenges] = useState<Challenge[]>([])
+  const [isChallengesLoading, setIsChallengesLoading] = useState(true)
+  const [challengesError, setChallengesError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -63,6 +69,22 @@ const HomePage = () => {
     fetchUser()
   }, [router])
 
+  useEffect(() => {
+    async function fetchChallenges() {
+      setIsChallengesLoading(true)
+      setChallengesError(null)
+      try {
+        const data = await getAllChallenges()
+        setChallenges(data)
+      } catch {
+        setChallengesError("Failed to load challenges")
+      } finally {
+        setIsChallengesLoading(false)
+      }
+    }
+    fetchChallenges()
+  }, [])
+
   const handleLogout = () => {
     localStorage.removeItem("accessToken")
     setAuthToken(null)
@@ -78,23 +100,6 @@ const HomePage = () => {
       description: "Consecutive active days",
     },
     { title: "Weight Loss", value: "3.2/5", description: "KG lost/goal" },
-  ]
-
-  const challenges: Challenge[] = [
-    {
-      id: "1",
-      title: "10K Steps Challenge",
-      progress: 70,
-      description: "7,533/10,000 steps today",
-      icon: <Clock className="h-5 w-5 text-indigo-500" />,
-    },
-    {
-      id: "2",
-      title: "Drink Enough Water Challenge (30 days)",
-      progress: 40,
-      description: "1.2/3.0 liters today • Day 18/30",
-      icon: <Clock className="h-5 w-5 text-blue-500" />,
-    },
   ]
 
   return (
@@ -160,6 +165,70 @@ const HomePage = () => {
           ))}
         </div>
 
+        {/* Challenges */}
+        <div className="mb-6">
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="font-semibold text-gray-800 mb-2"
+          >
+            Current Challenges
+          </motion.h2>
+          <div className="space-y-3">
+            {isChallengesLoading ? (
+              <div className="text-gray-500 text-sm">Loading challenges...</div>
+            ) : challengesError ? (
+              <div className="text-red-500 text-sm">{challengesError}</div>
+            ) : challenges.length === 0 ? (
+              <div className="text-gray-500 text-sm">
+                No challenges available.
+              </div>
+            ) : (
+              challenges.map((challenge, idx) => (
+                <motion.div
+                  key={challenge.id}
+                  initial={{ x: -30, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{
+                    delay: idx * 0.15 + 0.2,
+                    type: "spring",
+                    stiffness: 100,
+                  }}
+                  className="bg-gray-100 rounded-lg p-3 shadow-md cursor-pointer hover:bg-gray-200"
+                  onClick={() => router.push(`/challenge/${challenge.id}`)}
+                >
+                  <div className="flex space-x-3 items-center mb-2">
+                    <Clock
+                      className={`h-5 w-5 ${
+                        challenge.conditionKey.includes("water")
+                          ? "text-blue-500"
+                          : "text-indigo-500"
+                      }`}
+                    />
+                    <div>
+                      <h3 className="text-sm font-medium">
+                        {challenge.description}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        {challenge.conditionValue} {challenge.unit} •{" "}
+                        {challenge.timeFrame}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-300 rounded-full h-1.5">
+                    <div
+                      className="bg-blue-600 h-1.5 rounded-full"
+                      style={{
+                        width: `${Math.floor(Math.random() * 80) + 10}%`,
+                      }}
+                    ></div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </div>
         {/* Health News */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -208,51 +277,6 @@ const HomePage = () => {
             </div>
           </motion.div>
         </motion.div>
-
-        {/* Challenges */}
-        <div className="mb-6">
-          <motion.h2
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="font-semibold text-gray-800 mb-2"
-          >
-            Current Challenges
-          </motion.h2>
-          <div className="space-y-3">
-            {challenges.map((challenge, idx) => (
-              <motion.div
-                key={challenge.id}
-                initial={{ x: -30, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{
-                  delay: idx * 0.15 + 0.2,
-                  type: "spring",
-                  stiffness: 100,
-                }}
-                className="bg-gray-100 rounded-lg p-3 shadow-md cursor-pointer hover:bg-gray-200"
-                onClick={() => router.push(`/challenge/${challenge.id}`)}
-              >
-                <div className="flex space-x-3 items-center mb-2">
-                  {challenge.icon}
-                  <div>
-                    <h3 className="text-sm font-medium">{challenge.title}</h3>
-                    <p className="text-xs text-gray-500">
-                      {challenge.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="w-full bg-gray-300 rounded-full h-1.5">
-                  <div
-                    className="bg-blue-600 h-1.5 rounded-full"
-                    style={{ width: `${challenge.progress}%` }}
-                  ></div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
         {/* Quick Access */}
         <div>
           <h2 className="font-semibold text-gray-800 mb-2">Quick Access</h2>

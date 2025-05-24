@@ -4,8 +4,8 @@ import React, { useRef, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { CheckCircle2, UploadCloud } from "lucide-react"
-import { motion } from "framer-motion"
+import { CheckCircle2, UploadCloud, BadgeX } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils"
 import BottomNavigation from "@/components/navbar"
 import { checkChallengeImage } from "@/utils/api"
+import Image from "next/image"
 
 const ChallengeEvidencePage = () => {
   const router = useRouter()
@@ -23,9 +24,11 @@ const ChallengeEvidencePage = () => {
   const [file, setFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {
@@ -66,11 +69,19 @@ const ChallengeEvidencePage = () => {
     if (!file) return
     setIsLoading(true)
     setIsSuccess(false)
+    setUploadMessage(null)
     try {
-      await checkChallengeImage(Number(id), file)
-      setIsSuccess(true)
+      const resp = (await checkChallengeImage(Number(id), file)) as {
+        success: boolean
+        message: string
+      }
+      setIsSuccess(resp.success)
+      setUploadMessage(resp.message)
+      setShowModal(true)
     } catch {
       setIsSuccess(false)
+      setUploadMessage("Upload failed. Please try again.")
+      setShowModal(true)
     } finally {
       setIsLoading(false)
     }
@@ -92,11 +103,50 @@ const ChallengeEvidencePage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <AnimatePresence>
+              {showModal && uploadMessage && (
+                <motion.div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowModal(false)}
+                >
+                  <motion.div
+                    className="bg-white rounded-2xl shadow-xl p-8 max-w-xs w-full flex flex-col items-center"
+                    initial={{ scale: 0.9, y: 40 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 40 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {isSuccess ? (
+                      <CheckCircle2 className="w-14 h-14 text-green-500 mb-2" />
+                    ) : (
+                      <BadgeX className="w-14 h-14 text-red-400 mb-2" />
+                    )}
+                    <div
+                      className={`text-center mb-4 text-lg font-medium ${
+                        isSuccess ? "text-green-700" : "text-red-500"
+                      }`}
+                    >
+                      {uploadMessage}
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={() => router.push("/home")}
+                    >
+                      Go to Home
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             {isSuccess ? (
               <div className="flex flex-col items-center space-y-4 py-8">
                 <CheckCircle2 className="w-16 h-16 text-green-500 mb-2" />
                 <p className="text-green-600 font-medium text-lg">
-                  Upload successful!
+                  {uploadMessage || "Upload successful!"}
                 </p>
                 <Button onClick={() => router.push("/home")}>
                   Back to Home
@@ -140,10 +190,13 @@ const ChallengeEvidencePage = () => {
                   {file && (
                     <div className="mt-4 w-full flex flex-col items-center">
                       {previewUrl ? (
-                        <img
+                        <Image
                           src={previewUrl}
                           alt="Preview"
+                          width={128}
+                          height={128}
                           className="w-32 h-32 object-cover rounded-lg border mb-2"
+                          unoptimized
                         />
                       ) : (
                         <span className="text-xs text-gray-600">
