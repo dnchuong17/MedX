@@ -1,14 +1,15 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import { Home, User, MessageCircle, File } from "lucide-react"
 import Link from "next/link"
 import { useDispatch, useSelector } from "react-redux"
 import { RootState } from "@/store/store"
 import { setActiveTab, NavigationTab } from "@/store/features/navigationSlice"
+import { usePathname } from "next/navigation"
 
 const navItems = [
-  { key: "home" as NavigationTab, href: "/", icon: Home },
+  { key: "home" as NavigationTab, href: "/home", icon: Home },
   { key: "chat" as NavigationTab, href: "/chat", icon: MessageCircle },
   { key: "health-record" as NavigationTab, href: "/health-record", icon: File },
   { key: "profile" as NavigationTab, href: "/profile", icon: User },
@@ -19,6 +20,14 @@ export function BottomNavigation() {
   const activeTab = useSelector(
     (state: RootState) => state.navigation.activeTab
   )
+  const pathname = usePathname()
+
+  useEffect(() => {
+    const found = navItems.find((item) => pathname.startsWith(item.href))
+    if (found && activeTab !== found.key) {
+      dispatch(setActiveTab(found.key))
+    }
+  }, [pathname, dispatch, activeTab])
 
   const handleTabClick = (tab: NavigationTab) => {
     dispatch(setActiveTab(tab))

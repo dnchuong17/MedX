@@ -365,6 +365,58 @@ export async function getUserByEmail(email: string): Promise<User> {
   }
 }
 
+export async function getUserByPhone(phone: string): Promise<User> {
+  try {
+    const token = safeLocalStorage.getItem("accessToken")
+    if (!token) {
+      throw new Error("No authentication token found")
+    }
+
+    setAuthToken(token)
+
+    const response = await apiClient.get<User>(`/user/phone`, {
+      params: { phone },
+    })
+    return response.data
+  } catch (error) {
+    console.error("Error fetching user by phone:", error)
+
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      safeLocalStorage.removeItem("accessToken")
+      setAuthToken(null)
+      throw new Error("Your session has expired. Please log in again.")
+    }
+
+    throw error
+  }
+}
+
+export async function getUserByWallet(wallet_address: string): Promise<User> {
+  try {
+    const token = safeLocalStorage.getItem("accessToken")
+    if (!token) {
+      throw new Error("No authentication token found")
+    }
+
+    setAuthToken(token)
+
+    const response = await apiClient.get<User>(`/user/wallet`, {
+      params: { wallet_address },
+    })
+    return response.data
+  } catch (error) {
+    console.error("Error fetching user by wallet:", error)
+
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      safeLocalStorage.removeItem("accessToken")
+      setAuthToken(null)
+      throw new Error("Your session has expired. Please log in again.")
+    }
+
+    throw error
+  }
+}
+
 export interface HealthRecordInput {
   file?: File;
   publicKey?: string;
