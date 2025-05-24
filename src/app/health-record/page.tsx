@@ -650,8 +650,6 @@ export default function HealthRecordsApp() {
                     </button>
                     <AddButton />
                 </div>
-
-
                 <BottomNavigation/>
             </div>
         </div>
