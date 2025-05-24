@@ -4,59 +4,99 @@ import {
     ChevronLeft,
     Search,
     Settings,
-
-
     ChevronDown,
 } from "lucide-react";
 import BottomNavigation from "@/components/navbar";
-import {useRouter} from "next/navigation";
-import ShareButton from "@/components/health-record/share-button";
-import AddButton from "@/components/health-record/add.button";export default function HealthRecordsApp() {
+import { useRouter } from "next/navigation";
+import AddButton from "@/components/health-record/add.button";
+
+import { getUserRecord } from "@/utils/api";
+
+export interface UserRecord {
+    url: string;
+    versionOf: string;
+    doctor: string;
+    category: string;
+    facility: string;
+    date: string;
+    notes: string;
+}
+
+
+interface UIRecord {
+    id: number;
+    title: string;
+    date: string;
+    doctor?: string;
+    lab?: string;
+    type: string;
+    status: string;
+    url?: string;
+    notes?: string;
+}
+
+export default function HealthRecordsApp() {
     const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
     const [filterOption, setFilterOption] = useState("all");
     const [sortOption, setSortOption] = useState("date-newest");
-    const [filteredRecords, setFilteredRecords] = useState<{
-        id: number;
-        title: string;
-        date: string;
-        doctor?: string;
-        lab?: string;
-        type: string;
-        location: string;
-        status: string;
-    }[]>([]);
+    const [filteredRecords, setFilteredRecords] = useState<UIRecord[]>([]);
+    const [allRecords, setAllRecords] = useState<UIRecord[]>([]);
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-    const router = useRouter()
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
-    const initialRecords = [
-        {
-            id: 1,
-            title: "General Check-up",
-            date: "05/05/2025",
-            doctor: "Thomas Johson",
-            type: "Periodic Check-up",
-            location: "Thu Duc Hospital",
+    // Transform API record to UI format (since getUserRecord returns single record)
+    const transformRecord = (apiRecord: UserRecord, index: number = 0): UIRecord => {
+        return {
+            id: index + 1,
+            title: apiRecord.category || "Health Record",
+            date: apiRecord.date ? formatDate(apiRecord.date) : "N/A",
+            doctor: apiRecord.doctor,
+            type: apiRecord.category || "General",
+            location: apiRecord.facility || "Unknown",
             status: "Shared",
-        },
-        {
-            id: 2,
-            title: "Blood Test",
-            date: "20/04/2025",
-            lab: "Medic Lab",
-            type: "Test",
-            location: "Gia Dinh Hospital",
-            status: "Pending Verification",
-        },
-        {
-            id: 3,
-            title: "Cardiology Exam",
-            date: "05/05/2025",
-            doctor: "Thomas Johson",
-            type: "Specialist",
-            location: "Gia Dinh Hospital",
-            status: "Shared",
-        },
-    ];
+            url: apiRecord.url,
+            notes: apiRecord.notes
+        };
+    };
+
+    const formatDate = (dateString: string): string => {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB');
+        } catch {
+            return dateString;
+        }
+    };
+
+    const fetchUserRecords = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const apiRecord = await getUserRecord();
+
+            const transformedRecord = transformRecord(apiRecord, 0);
+            setAllRecords([transformedRecord]);
+
+        } catch (err) {
+            console.error("Error fetching user records:", err);
+            setError(err instanceof Error ? err.message : "Failed to fetch records");
+            setAllRecords([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+
+    const openRecord = (record: UIRecord) => {
+        if (record.url) {
+            const decodedUrl = decodeURIComponent(record.url);
+            window.open(decodedUrl, '_blank');
+        }
+    };
 
     const toggleDropdown = (type: string) => {
         setOpenDropdown(openDropdown === type ? null : type);
@@ -92,11 +132,20 @@ import AddButton from "@/components/health-record/add.button";export default fun
     };
 
     const handleClick = () => {
-        router.push('/health-record/temporary-link')
-    }
+        router.push('/health-record/temporary-link');
+    };
+
+    const getUniqueCategories = () => {
+        const categories = [...new Set(allRecords.map(r => r.type))];
+        return categories.filter(Boolean);
+    };
 
     useEffect(() => {
-        let filtered = [...initialRecords];
+        fetchUserRecords();
+    }, []);
+
+    useEffect(() => {
+        let filtered = [...allRecords];
 
         if (filterOption.startsWith("type-")) {
             const type = filterOption.slice(5);
@@ -107,43 +156,82 @@ import AddButton from "@/components/health-record/add.button";export default fun
         }
 
         filtered.sort((a, b) => {
-            const dateA = a.date.split("/").reverse().join("");
-            const dateB = b.date.split("/").reverse().join("");
+            const parseDate = (dateStr: string) => {
+                if (dateStr === "N/A") return new Date(0);
+                const parts = dateStr.split("/");
+                if (parts.length === 3) {
+                    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                }
+                return new Date(dateStr);
+            };
+
+            const dateA = parseDate(a.date);
+            const dateB = parseDate(b.date);
+
             return sortOption === "date-newest"
-                ? dateB.localeCompare(dateA)
-                : dateA.localeCompare(dateB);
+                ? dateB.getTime() - dateA.getTime()
+                : dateA.getTime() - dateB.getTime();
         });
 
         setFilteredRecords(filtered);
         setSelectedRecords([]);
-    }, [filterOption, sortOption]);
+    }, [filterOption, sortOption, allRecords]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex justify-center items-center p-4">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading health records...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen flex justify-center p-4 ">
-            <div className="bg-white w-full max-w-md overflow-hidden relative pb-20 ">
+        <div className="min-h-screen flex justify-center p-4">
+            <div className="bg-white w-full max-w-md overflow-hidden relative pb-20">
 
                 {/* Header */}
-                <div className="p-4 flex justify-between items-center ">
+                <div className="p-4 flex justify-between items-center">
                     <ChevronLeft className="text-indigo-600 w-6 h-6"/>
                     <h1 className="text-indigo-600 text-xl font-semibold">Health Record</h1>
                     <div className="flex space-x-2">
-                        <div className="bg-blue-100 rounded-full p-2">
+                        <button
+                            onClick={fetchUserRecords}
+                            className="bg-blue-100 rounded-full p-2"
+                        >
                             <Search className="w-5 h-5 text-indigo-600"/>
-                        </div>
+                        </button>
                         <div className="bg-blue-100 rounded-full p-2">
                             <Settings className="w-5 h-5 text-indigo-600"/>
                         </div>
                     </div>
                 </div>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="px-4 mt-2">
+                        <div className="bg-red-50 rounded-lg p-3 text-red-800 text-sm">
+                            <p className="font-medium">Error loading records:</p>
+                            <p>{error}</p>
+                            <button
+                                onClick={fetchUserRecords}
+                                className="mt-2 text-red-600 font-medium underline"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Filter Tags */}
                 {filterOption !== "all" && (
                     <div className="px-4 mt-2">
-                        <div
-                            className="bg-indigo-50 rounded-lg p-2 text-indigo-800 text-sm flex justify-between items-center">
-              <span>
-                Showing: {filterOption.startsWith("type-") ? `Type - ${filterOption.slice(5)}` : `Status - ${filterOption.slice(7)}`}
-              </span>
+                        <div className="bg-indigo-50 rounded-lg p-2 text-indigo-800 text-sm flex justify-between items-center">
+                            <span>
+                                Showing: {filterOption.startsWith("type-") ? `Type - ${filterOption.slice(5)}` : `Status - ${filterOption.slice(7)}`}
+                            </span>
                             <button
                                 onClick={() => setFilterOption("all")}
                                 className="text-indigo-600 font-medium"
@@ -168,12 +256,10 @@ import AddButton from "@/components/health-record/add.button";export default fun
                                 active: sortOption,
                             },
                             {
-                                label: " Type",
+                                label: "Type",
                                 options: [
                                     {label: "All Types", value: "all"},
-                                    {label: "Periodic Check-up", value: "Periodic Check-up"},
-                                    {label: "Test", value: "Test"},
-                                    {label: "Specialist", value: "Specialist"},
+                                    ...getUniqueCategories().map(cat => ({label: cat, value: cat}))
                                 ],
                                 handler: filterByType,
                                 active: filterOption,
@@ -200,8 +286,7 @@ import AddButton from "@/components/health-record/add.button";export default fun
                                     <ChevronDown className="ml-1 w-4 h-4"/>
                                 </button>
                                 {openDropdown === label && (
-                                    <div
-                                        className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-40">
+                                    <div className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-40">
                                         {options.map(({label, value}) => (
                                             <button
                                                 key={value}
@@ -235,10 +320,12 @@ import AddButton from "@/components/health-record/add.button";export default fun
                 <div className="px-4 py-4 space-y-4">
                     {filteredRecords.length > 0 ? (
                         filteredRecords.map((record) => (
-                            <div key={record.id}
-                                 className="border border-gray-200 rounded-xl p-3 flex items-center shadow-sm hover:shadow-md transition-shadow">
-                                <div
-                                    className="bg-blue-100 rounded-full w-20 h-20 flex items-center justify-center mr-3">
+                            <div
+                                key={record.id}
+                                className="border border-gray-200 rounded-xl p-3 flex items-center shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => openRecord(record)}
+                            >
+                                <div className="bg-blue-100 rounded-full w-20 h-20 flex items-center justify-center mr-3">
                                     <span className="text-2xl font-bold">PDF</span>
                                 </div>
                                 <div className="flex-1">
@@ -249,6 +336,7 @@ import AddButton from "@/components/health-record/add.button";export default fun
                                         {record.lab && <p><strong>Lab:</strong> {record.lab}</p>}
                                         <p><strong>Type:</strong> {record.type}</p>
                                         <p><strong>Location:</strong> {record.location}</p>
+                                        {record.notes && <p><strong>Notes:</strong> {record.notes}</p>}
                                     </div>
                                     {record.status && (
                                         <div className={`mt-1 px-3 py-1 rounded-full text-xs inline-block ${
@@ -261,7 +349,10 @@ import AddButton from "@/components/health-record/add.button";export default fun
                                     )}
                                 </div>
                                 <div
-                                    onClick={() => toggleSelectRecord(record.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleSelectRecord(record.id);
+                                    }}
                                     className={`w-6 h-6 rounded-full border flex items-center justify-center cursor-pointer ${
                                         selectedRecords.includes(record.id)
                                             ? "bg-indigo-600 border-indigo-600"
@@ -276,13 +367,17 @@ import AddButton from "@/components/health-record/add.button";export default fun
                         ))
                     ) : (
                         <div className="text-center py-10">
-                            <p className="text-gray-500">No records match your filter criteria</p>
-                            <button
-                                onClick={() => setFilterOption("all")}
-                                className="mt-2 text-indigo-600 font-medium"
-                            >
-                                Show All Records
-                            </button>
+                            <p className="text-gray-500">
+                                {allRecords.length === 0 ? "No health records found" : "No records match your filter criteria"}
+                            </p>
+                            {filterOption !== "all" && (
+                                <button
+                                    onClick={() => setFilterOption("all")}
+                                    className="mt-2 text-indigo-600 font-medium"
+                                >
+                                    Show All Records
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -294,16 +389,14 @@ import AddButton from "@/components/health-record/add.button";export default fun
                         className={`${
                             selectedRecords.length > 0 ? "bg-indigo-600" : "bg-gray-400"
                         } text-white w-full py-3 rounded-full font-bold text-lg shadow-md transition-colors`}
+                        onClick={handleClick}
                     >
                         {selectedRecords.length > 0
                             ? `Share ${selectedRecords.length} Record${selectedRecords.length > 1 ? "s" : ""}`
                             : "Select Records to Share"}
                     </button>
                     <AddButton />
-
                 </div>
-
-
 
                 <BottomNavigation/>
             </div>
